@@ -100,7 +100,8 @@ class ChatCubit extends Cubit<ChatState> {
   final Uuid _uuid;
   StreamSubscription<AcpEvent>? _eventSub;
 
-  void Function(AppSession session)? onSessionUpdated;
+  /// Session UI + optional disk. Streaming tokens use [persist]: false.
+  void Function(AppSession session, {bool persist})? onSessionUpdated;
   AppSession? _activeSession;
   String? _currentStreamMessageId;
   String _streamBuffer = '';
@@ -110,7 +111,14 @@ class ChatCubit extends Cubit<ChatState> {
   bool _promptInFlight = false;
   bool _streamUiFinalized = false;
   Timer? _streamIdleTimer;
+  Timer? _streamUiThrottle;
+  bool _streamUiDirty = false;
   static const _streamIdleTimeout = Duration(seconds: 2);
+  static const _streamUiThrottleInterval = Duration(milliseconds: 33);
+
+  void _notifySession(AppSession session, {bool persist = true}) {
+    onSessionUpdated?.call(session, persist: persist);
+  }
 
   void setActiveSession(AppSession? session) {
     if (session == null) {
@@ -141,6 +149,10 @@ class ChatCubit extends Cubit<ChatState> {
   Future<void> sendMessage({
     required AppSession session,
     required String userText,
+
+    /// Optional short label for scrollback (e.g. raw goal text while
+    /// [userText] carries the framed ACP payload).
+    String? displayText,
     required WorkspaceInfo? workspace,
     WorkspaceMemory? workspaceMemory,
     required List<AttachmentItem> attachments,
@@ -171,20 +183,29 @@ class ChatCubit extends Cubit<ChatState> {
             .toList(),
       );
       if (workingSession.messages.length != session.messages.length) {
-        onSessionUpdated?.call(workingSession);
+        _notifySession(workingSession, persist: false);
       }
 
       // Append user message + streaming placeholder immediately so the UI shows it
       // without waiting for ACP session creation, attachment processing or send.
       final userImages = attachments
           .where((a) => a.type == AttachmentType.image)
-          .map((a) => ChatImageAttachment(id: _uuid.v4(), path: a.path, mimeType: a.mimeType))
+          .map(
+            (a) => ChatImageAttachment(
+              id: _uuid.v4(),
+              path: a.path,
+              mimeType: a.mimeType,
+            ),
+          )
           .toList();
+      final scrollbackText = (displayText ?? userText).trim().isNotEmpty
+          ? (displayText ?? userText)
+          : userText;
       final userMessage = ChatMessage(
         id: _uuid.v4(),
         role: ChatMessageRole.user,
         content: _userMessageLabel(
-          userText: userText,
+          userText: scrollbackText,
           attachments: attachments,
         ),
         createdAt: DateTime.now(),
@@ -214,13 +235,14 @@ class ChatCubit extends Cubit<ChatState> {
         updatedAt: DateTime.now(),
       );
       _activeSession = workingSession;
-      onSessionUpdated?.call(workingSession);
+      _notifySession(workingSession, persist: false);
 
-      if (workingSession.acpSessionId == null || workingSession.acpSessionId!.isEmpty) {
+      if (workingSession.acpSessionId == null ||
+          workingSession.acpSessionId!.isEmpty) {
         final acpSession = await _acpClient.createSession(cwd: workspace?.path);
         workingSession = workingSession.copyWith(acpSessionId: acpSession.id);
         _activeSession = workingSession;
-        onSessionUpdated?.call(workingSession);
+        _notifySession(workingSession, persist: true);
       }
 
       final memorySection = workspaceMemory == null
@@ -264,7 +286,6 @@ class ChatCubit extends Cubit<ChatState> {
       workingSession = _activeSession ?? workingSession;
 
       unawaited(_maybeGenerateTitle(workingSession));
-      unawaited(_maybeContinueGoal());
     } on AppError catch (e) {
       _finalizeFailedStream();
       _appendErrorMessage(e);
@@ -275,6 +296,9 @@ class ChatCubit extends Cubit<ChatState> {
           lastActionStatus: 'Prompt failed',
         ),
       );
+      ServiceLocator.instance.goalCubit.markFailed(
+        'Goal paused: prompt failed',
+      );
     } catch (e) {
       _finalizeFailedStream();
       emit(
@@ -283,9 +307,12 @@ class ChatCubit extends Cubit<ChatState> {
           lastActionStatus: 'Prompt failed: $e',
         ),
       );
+      ServiceLocator.instance.goalCubit.markFailed('Goal paused: $e');
     } finally {
       _promptInFlight = false;
       _cancelStreamIdleTimer();
+      // Always schedule after the turn fully clears in-flight state.
+      unawaited(Future<void>.delayed(Duration.zero, _maybeContinueGoal));
     }
   }
 
@@ -298,9 +325,7 @@ class ChatCubit extends Cubit<ChatState> {
         if (m.id == _currentStreamMessageId &&
             m.status == ChatMessageStatus.streaming) {
           return m.copyWith(
-            content: _finalizedAssistantContent(
-              interrupted: true,
-            ),
+            content: _finalizedAssistantContent(interrupted: true),
             status: ChatMessageStatus.failed,
             images: _streamImages,
           );
@@ -310,13 +335,35 @@ class ChatCubit extends Cubit<ChatState> {
     );
     _activeSession = updated;
     _currentStreamMessageId = null;
-    onSessionUpdated?.call(updated);
+    _cancelStreamUiThrottle(flush: false);
+    _notifySession(updated, persist: true);
   }
 
   void cancelGeneration() {
     final session = _activeSession;
     if (session?.acpSessionId != null) {
       _acpClient.cancelSession(session!.acpSessionId!);
+    }
+    _flushStreamUi(force: true);
+    if (session != null && _currentStreamMessageId != null) {
+      final updated = session.copyWith(
+        status: AppSessionStatus.cancelled,
+        messages: session.messages.map((m) {
+          if (m.id == _currentStreamMessageId &&
+              m.status == ChatMessageStatus.streaming) {
+            return m.copyWith(
+              content: _finalizedAssistantContent(interrupted: true),
+              status: ChatMessageStatus.cancelled,
+              images: _streamImages,
+            );
+          }
+          return m;
+        }).toList(),
+      );
+      _activeSession = updated;
+      _currentStreamMessageId = null;
+      _streamUiFinalized = true;
+      _notifySession(updated, persist: true);
     }
     emit(
       state.copyWith(isStreaming: false, lastActionStatus: 'Cancelled by user'),
@@ -326,25 +373,25 @@ class ChatCubit extends Cubit<ChatState> {
   void setModel(GrokModel model) {
     final session = _activeSession;
     if (session == null) return;
-    onSessionUpdated?.call(
-      session.copyWith(
-        selectedModel: model,
-        modelConfirmed: false,
-        updatedAt: DateTime.now(),
-      ),
+    final updated = session.copyWith(
+      selectedModel: model,
+      modelConfirmed: false,
+      updatedAt: DateTime.now(),
     );
+    _activeSession = updated;
+    _notifySession(updated, persist: true);
   }
 
   void setEffort(ThinkingEffort effort) {
     final session = _activeSession;
     if (session == null) return;
-    onSessionUpdated?.call(
-      session.copyWith(
-        selectedEffort: effort,
-        effortConfirmed: false,
-        updatedAt: DateTime.now(),
-      ),
+    final updated = session.copyWith(
+      selectedEffort: effort,
+      effortConfirmed: false,
+      updatedAt: DateTime.now(),
     );
+    _activeSession = updated;
+    _notifySession(updated, persist: true);
   }
 
   void respondToPermission(bool approved) {
@@ -411,22 +458,26 @@ class ChatCubit extends Cubit<ChatState> {
   }
 
   void _applyGeneratedTitle(AppSession session, String? title) {
-    final current = _activeSession?.id == session.id ? _activeSession! : session;
+    final current = _activeSession?.id == session.id
+        ? _activeSession!
+        : session;
     final updated = current.copyWith(
       title: title ?? current.title,
       titleGenerated: true,
       updatedAt: DateTime.now(),
     );
     _activeSession = updated;
-    onSessionUpdated?.call(updated);
+    _notifySession(updated, persist: true);
   }
 
   void _markTitleGenerationAttempted(AppSession session) {
-    final current = _activeSession?.id == session.id ? _activeSession! : session;
+    final current = _activeSession?.id == session.id
+        ? _activeSession!
+        : session;
     if (current.titleGenerated) return;
     final updated = current.copyWith(titleGenerated: true);
     _activeSession = updated;
-    onSessionUpdated?.call(updated);
+    _notifySession(updated, persist: true);
   }
 
   void _onAcpEvent(AcpEvent event) {
@@ -451,9 +502,10 @@ class ChatCubit extends Cubit<ChatState> {
       case AcpEventType.assistantTextChunk:
         if (event.text != null) {
           _streamBuffer += event.text!;
-          _updateStreamingAssistantMessage(session);
+          _scheduleStreamingUiFlush(session);
           _scheduleStreamIdleFinalization(session);
-          if (state.isStreaming && state.lastActionStatus == 'Sending prompt…') {
+          if (state.isStreaming &&
+              state.lastActionStatus == 'Sending prompt…') {
             emit(state.copyWith(lastActionStatus: 'Streaming…'));
           }
         }
@@ -478,7 +530,7 @@ class ChatCubit extends Cubit<ChatState> {
           rawEventCount: session.rawEventCount + 1,
         );
         _activeSession = session;
-        onSessionUpdated?.call(session);
+        _notifySession(session, persist: false);
         emit(
           state.copyWith(
             lastActionStatus: 'Tool: ${event.title ?? event.status}',
@@ -497,7 +549,7 @@ class ChatCubit extends Cubit<ChatState> {
         );
       case AcpEventType.modelChanged:
         if (event.text != null) {
-          onSessionUpdated?.call(session.copyWith(modelConfirmed: true));
+          _notifySession(session.copyWith(modelConfirmed: true), persist: true);
         }
       case AcpEventType.sessionError:
         emit(state.copyWith(lastActionStatus: 'Session error'));
@@ -513,11 +565,13 @@ class ChatCubit extends Cubit<ChatState> {
     if (_streamUiFinalized || _currentStreamMessageId == null) return;
     _streamUiFinalized = true;
     _cancelStreamIdleTimer();
+    _cancelStreamUiThrottle(flush: false);
 
-    final updated = session.copyWith(
+    final base = _activeSession ?? session;
+    final updated = base.copyWith(
       status: AppSessionStatus.idle,
       updatedAt: DateTime.now(),
-      messages: session.messages.map((m) {
+      messages: base.messages.map((m) {
         if (m.id == _currentStreamMessageId) {
           return m.copyWith(
             content: _finalizedAssistantContent(),
@@ -529,7 +583,8 @@ class ChatCubit extends Cubit<ChatState> {
       }).toList(),
     );
     _activeSession = updated;
-    onSessionUpdated?.call(updated);
+    _currentStreamMessageId = null;
+    _notifySession(updated, persist: true);
 
     emit(
       state.copyWith(
@@ -580,21 +635,45 @@ class ChatCubit extends Cubit<ChatState> {
     return interrupted ? '(response interrupted)' : '(empty response)';
   }
 
-  void _updateStreamingAssistantMessage(AppSession session) {
-    if (_currentStreamMessageId == null) return;
+  void _scheduleStreamingUiFlush(AppSession session) {
+    _streamUiDirty = true;
+    _activeSession = session;
+    if (_streamUiThrottle?.isActive ?? false) return;
+    _streamUiThrottle = Timer(_streamUiThrottleInterval, () {
+      _flushStreamUi();
+    });
+  }
+
+  void _flushStreamUi({bool force = false}) {
+    if (!_streamUiDirty && !force) return;
+    final session = _activeSession;
+    if (session == null || _currentStreamMessageId == null) {
+      _streamUiDirty = false;
+      return;
+    }
+    _streamUiDirty = false;
     final updated = session.copyWith(
       messages: session.messages.map((m) {
         if (m.id == _currentStreamMessageId) {
-          return m.copyWith(
-            content: _streamBuffer,
-            images: _streamImages,
-          );
+          return m.copyWith(content: _streamBuffer, images: _streamImages);
         }
         return m;
       }).toList(),
     );
     _activeSession = updated;
-    onSessionUpdated?.call(updated);
+    // Never disk-write mid-stream.
+    _notifySession(updated, persist: false);
+  }
+
+  void _cancelStreamUiThrottle({required bool flush}) {
+    _streamUiThrottle?.cancel();
+    _streamUiThrottle = null;
+    if (flush) _flushStreamUi(force: true);
+  }
+
+  void _updateStreamingAssistantMessage(AppSession session) {
+    _scheduleStreamingUiFlush(session);
+    _flushStreamUi(force: true);
   }
 
   Future<void> _handleAssistantImageChunk(AcpEvent event) async {
@@ -670,46 +749,148 @@ class ChatCubit extends Cubit<ChatState> {
       createdAt: DateTime.now(),
       status: ChatMessageStatus.failed,
     );
-    onSessionUpdated?.call(
-      session.copyWith(
-        messages: [...session.messages, errorMsg],
-        status: AppSessionStatus.error,
-      ),
+    final updated = session.copyWith(
+      messages: [...session.messages, errorMsg],
+      status: AppSessionStatus.error,
     );
+    _activeSession = updated;
+    _notifySession(updated, persist: true);
   }
 
   @override
   Future<void> close() async {
     _cancelStreamIdleTimer();
+    _cancelStreamUiThrottle(flush: false);
     await _eventSub?.cancel();
     return super.close();
   }
 
   Future<void> _maybeContinueGoal() async {
-    final goal = ServiceLocator.instance.goalCubit.state;
-    if (!goal.isActive || goal.isComplete || goal.text == null) return;
+    final locator = ServiceLocator.instance;
+    final goalCubit = locator.goalCubit;
 
-    final lastMessage = _activeSession?.messages.lastOrNull;
-    if (lastMessage == null || lastMessage.role != ChatMessageRole.assistant) return;
+    if (_promptInFlight || state.isStreaming) return;
+    if (_activeSession == null) return;
 
-    if (lastMessage.content.contains('✅ Goal achieved')) {
-      ServiceLocator.instance.goalCubit.markComplete();
+    if (!goalCubit.canContinue) {
+      if (goalCubit.state.isActive &&
+          goalCubit.state.iteration >= goalCubit.state.maxIterations) {
+        goalCubit.markFailed(
+          'Stopped: reached max iterations (${goalCubit.state.maxIterations})',
+        );
+      }
+      unawaited(_maybeRunNextMultitask());
       return;
     }
 
-    ServiceLocator.instance.goalCubit.incrementIteration();
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (_promptInFlight) return;
+    // Prefer last *assistant* message — tools often append after it.
+    final lastAssistant = _lastAssistantMessage(_activeSession!);
+    final content = lastAssistant?.content ?? '';
 
-    await sendMessage(
-      session: _activeSession!,
-      userText: goal.text!,
-      workspace: null,
-      attachments: const [],
-      supportsImages: true,
-      supportsEmbeddedContext: true,
-      attachmentSection: '',
-      settings: ServiceLocator.instance.settingsCubit.state.settings,
-    );
+    if (content.trim().isNotEmpty &&
+        GoalCubit.responseSignalsComplete(content)) {
+      goalCubit.markComplete();
+      unawaited(_maybeRunNextMultitask());
+      return;
+    }
+
+    // Avoid tight loops on empty replies.
+    if (content.trim().isEmpty && goalCubit.state.iteration > 0) {
+      // Still continue once more — tools-only turns are valid progress.
+    }
+
+    // Budget check *before* increment so we don't skip the last allowed step.
+    if (goalCubit.state.iteration >= goalCubit.state.maxIterations) {
+      goalCubit.markFailed(
+        'Stopped: reached max iterations (${goalCubit.state.maxIterations})',
+      );
+      return;
+    }
+
+    goalCubit.incrementIteration();
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (_promptInFlight || state.isStreaming || _activeSession == null) {
+      return;
+    }
+    // User may have stopped during the delay.
+    if (!goalCubit.state.isActive || goalCubit.state.isComplete) return;
+
+    final ws = locator.workspaceCubit.state;
+    final caps =
+        _acpClient.agentCapabilities?['promptCapabilities']
+            as Map<String, dynamic>?;
+    final supportsImages = caps?['image'] == true;
+    final supportsEmbedded = caps?['embeddedContext'] == true;
+
+    try {
+      await sendMessage(
+        session: _activeSession!,
+        userText: goalCubit.buildContinuationPrompt(),
+        workspace: ws.workspace,
+        workspaceMemory: ws.memory,
+        attachments: const [],
+        supportsImages: supportsImages,
+        supportsEmbeddedContext: supportsEmbedded,
+        attachmentSection: '',
+        settings: locator.settingsCubit.state.settings,
+      );
+    } catch (e) {
+      goalCubit.markFailed('Goal paused: $e');
+    }
   }
+
+  ChatMessage? _lastAssistantMessage(AppSession session) {
+    for (var i = session.messages.length - 1; i >= 0; i--) {
+      final m = session.messages[i];
+      if (m.role == ChatMessageRole.assistant) return m;
+    }
+    return null;
+  }
+
+  Future<void> _maybeRunNextMultitask() async {
+    final locator = ServiceLocator.instance;
+    final multi = locator.multitaskCubit;
+    if (multi.state.queuedCount == 0) return;
+    if (_promptInFlight || state.isStreaming) return;
+    // Never interleave with Goal autopilot.
+    if (locator.goalCubit.state.isActive) return;
+    if (!multi.state.enabled && multi.state.queuedCount > 0) {
+      // Queue can still run when Multitask chip is on; if disabled, skip auto.
+      // Allow Run queue only when enabled.
+    }
+    if (!multi.state.enabled) return;
+
+    final next = multi.markNextRunning();
+    if (next == null || _activeSession == null) return;
+
+    final ws = locator.workspaceCubit.state;
+    final framed = multi.framePrompt(next.prompt);
+    try {
+      await sendMessage(
+        session: _activeSession!,
+        userText: framed,
+        workspace: ws.workspace,
+        workspaceMemory: ws.memory,
+        attachments: const [],
+        supportsImages: true,
+        supportsEmbeddedContext: true,
+        attachmentSection: '',
+        settings: locator.settingsCubit.state.settings,
+      );
+      multi.markDone(next.id);
+      // Next queue item is picked up via _maybeContinueGoal → _maybeRunNextMultitask.
+    } catch (e) {
+      multi.markFailed(next.id, e.toString());
+    }
+  }
+
+  /// Call after a successful send to kick queued multitask work.
+  void notifyTurnIdle() {
+    if (!_promptInFlight && !state.isStreaming) {
+      unawaited(_maybeRunNextMultitask());
+    }
+  }
+
+  /// Public entry to drain the multitask queue (Controls → Run queue).
+  Future<void> runNextMultitask() => _maybeRunNextMultitask();
 }

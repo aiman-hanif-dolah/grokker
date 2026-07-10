@@ -95,14 +95,10 @@ class AcpClient {
     }
 
     final workingDir = _resolveSessionCwd(cwd);
-    final response = await _sendRequest(
-      'session/new',
-      {
-        'cwd': workingDir,
-        'mcpServers': <Map<String, dynamic>>[],
-      },
-      timeout: const Duration(seconds: 60),
-    );
+    final response = await _sendRequest('session/new', {
+      'cwd': workingDir,
+      'mcpServers': <Map<String, dynamic>>[],
+    }, timeout: const Duration(seconds: 60));
     if (response.isError) {
       final details = response.error?.data ?? response.error?.message;
       throw AcpSessionCreationFailedError(technicalDetails: '$details');

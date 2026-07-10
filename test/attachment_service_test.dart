@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grokker/features/attachments/data/services/attachment_service.dart';
+import 'package:grokker/shared/models/attachment_item.dart';
 
 void main() {
   late AttachmentService service;
@@ -11,9 +12,7 @@ void main() {
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('grokker_test');
-    service = AttachmentService(
-      supportDirectoryProvider: () async => tempDir,
-    );
+    service = AttachmentService(supportDirectoryProvider: () async => tempDir);
   });
 
   tearDown(() async {
@@ -29,12 +28,24 @@ void main() {
     expect(item!.type.name, 'code');
   });
 
-  test('rejects unknown extensions', () async {
+  test('accepts unknown extensions as binary', () async {
     final file = File('${tempDir.path}/test.xyz');
     await file.writeAsString('data');
 
     final item = await service.validateAndCreate(file.path);
-    expect(item, isNull);
+    expect(item, isNotNull);
+    expect(item!.type, AttachmentType.binary);
+  });
+
+  test('accepts pdf files', () async {
+    final file = File('${tempDir.path}/doc.pdf');
+    // Minimal PDF header bytes
+    await file.writeAsBytes(utf8.encode('%PDF-1.4\n%fake pdf content'));
+
+    final item = await service.validateAndCreate(file.path);
+    expect(item, isNotNull);
+    expect(item!.type, AttachmentType.pdf);
+    expect(item.mimeType, 'application/pdf');
   });
 
   test('createFromBytes stores pasted png', () async {

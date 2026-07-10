@@ -56,7 +56,8 @@ class WorkspaceMemory extends Equatable {
       agentsMd: json['agentsMd'] as String?,
       readmeMd: json['readmeMd'] as String?,
       cursorRules: json['cursorRules'] as String?,
-      keyFiles: (json['keyFiles'] as List<dynamic>?)
+      keyFiles:
+          (json['keyFiles'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],

@@ -63,7 +63,8 @@ class WorkspaceState extends Equatable {
 }
 
 class WorkspaceCubit extends Cubit<WorkspaceState> {
-  WorkspaceCubit(this._service, this._memoryService) : super(const WorkspaceState()) {
+  WorkspaceCubit(this._service, this._memoryService)
+    : super(const WorkspaceState()) {
     _restoreLastWorkspace();
   }
 
@@ -77,7 +78,9 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
   }
 
   Future<void> setWorkspace(String path, {bool forceRescan = false}) async {
-    emit(state.copyWith(isLoading: true, clearError: true, clearLearning: true));
+    emit(
+      state.copyWith(isLoading: true, clearError: true, clearLearning: true),
+    );
     try {
       final info = await _service.analyze(path);
       emit(
@@ -89,8 +92,7 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
         ),
       );
 
-      final hadCache =
-          !forceRescan && await _memoryService.hasValidCache(path);
+      final hadCache = !forceRescan && await _memoryService.hasValidCache(path);
       final memory = await _memoryService.loadOrScan(
         workspacePath: path,
         workspaceInfo: info,
@@ -98,11 +100,7 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
       );
 
       emit(
-        WorkspaceState(
-          workspace: info,
-          memory: memory,
-          fromCache: hadCache,
-        ),
+        WorkspaceState(workspace: info, memory: memory, fromCache: hadCache),
       );
       await _memoryService.saveLastWorkspacePath(path);
     } catch (e) {
@@ -128,5 +126,4 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
       await setWorkspace(lastPath);
     }
   }
-
 }

@@ -1,6 +1,17 @@
 import 'package:equatable/equatable.dart';
 
-enum AttachmentType { image, pdf, text, code, markdown, config, unknown }
+enum AttachmentType {
+  image,
+  pdf,
+  text,
+  code,
+  markdown,
+  config,
+
+  /// Generic binary (docx, zip, unknown extensions, etc.).
+  binary,
+  unknown,
+}
 
 class AttachmentItem extends Equatable {
   const AttachmentItem({
@@ -52,10 +63,13 @@ class AttachmentItem extends Equatable {
   };
 
   factory AttachmentItem.fromJson(Map<String, dynamic> json) {
+    final typeName = json['type'] as String? ?? 'unknown';
+    final type =
+        AttachmentType.values.asNameMap()[typeName] ?? AttachmentType.unknown;
     return AttachmentItem(
       id: json['id'] as String,
       path: json['path'] as String,
-      type: AttachmentType.values.byName(json['type'] as String),
+      type: type,
       fileName: json['fileName'] as String,
       sizeBytes: json['sizeBytes'] as int,
       mimeType: json['mimeType'] as String,

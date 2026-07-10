@@ -4,7 +4,8 @@ import 'approval_mode.dart';
 import 'grok_model.dart';
 import 'thinking_effort.dart';
 
-enum AppThemeMode { dark, light, system }
+/// Dark is the product default. Light is optional.
+enum AppThemeMode { dark, light }
 
 enum ComposerEnterBehavior { newline, send }
 
@@ -12,7 +13,7 @@ class AppSettings extends Equatable {
   const AppSettings({
     this.grokCommandPath = '',
     this.useNpxGrok = false,
-    this.defaultModel = GrokModel.grokBuild01,
+    this.defaultModel = GrokModel.defaultModel,
     this.defaultEffort = ThinkingEffort.auto,
     this.approvalMode = ApprovalMode.autoApproveReads,
     this.themeMode = AppThemeMode.dark,
@@ -93,7 +94,7 @@ class AppSettings extends Equatable {
   Map<String, dynamic> toJson() => {
     'grokCommandPath': grokCommandPath,
     'useNpxGrok': useNpxGrok,
-    'defaultModel': defaultModel.name,
+    'defaultModel': defaultModel.id,
     'defaultEffort': defaultEffort.name,
     'approvalMode': approvalMode.name,
     'themeMode': themeMode.name,
@@ -116,16 +117,14 @@ class AppSettings extends Equatable {
       useNpxGrok: json['useNpxGrok'] as bool? ?? false,
       defaultModel:
           GrokModelX.fromString(json['defaultModel'] as String?) ??
-          GrokModel.grokBuild01,
+          GrokModel.defaultModel,
       defaultEffort:
           ThinkingEffortX.fromString(json['defaultEffort'] as String?) ??
           ThinkingEffort.auto,
       approvalMode:
           ApprovalModeX.fromString(json['approvalMode'] as String?) ??
           ApprovalMode.autoApproveReads,
-      themeMode: AppThemeMode.values.byName(
-        json['themeMode'] as String? ?? 'dark',
-      ),
+      themeMode: _parseThemeMode(json['themeMode'] as String?),
       composerEnterBehavior: ComposerEnterBehavior.values.byName(
         json['composerEnterBehavior'] as String? ?? 'newline',
       ),
@@ -147,6 +146,12 @@ class AppSettings extends Equatable {
           (json['hiddenTools'] as List<dynamic>?)?.cast<String>().toSet() ??
           const {},
     );
+  }
+
+  static AppThemeMode _parseThemeMode(String? raw) {
+    // Always default dark. Legacy "system" maps to dark.
+    if (raw == 'light') return AppThemeMode.light;
+    return AppThemeMode.dark;
   }
 
   @override

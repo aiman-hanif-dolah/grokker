@@ -8,26 +8,30 @@ class AppTheme {
   static ThemeData dark() => _build(Brightness.dark);
   static ThemeData light() => _build(Brightness.light);
 
+  /// Prefer [MaterialApp.theme] + [MaterialApp.darkTheme] + [themeModeOf].
   static ThemeData fromSettings(AppSettings settings) {
-    switch (settings.themeMode) {
-      case AppThemeMode.dark:
-      case AppThemeMode.system:
-        return dark();
-      case AppThemeMode.light:
-        return light();
-    }
+    return settings.themeMode == AppThemeMode.light ? light() : dark();
+  }
+
+  /// Dark is default; light only when explicitly chosen.
+  static ThemeMode themeModeOf(AppSettings settings) {
+    return settings.themeMode == AppThemeMode.light
+        ? ThemeMode.light
+        : ThemeMode.dark;
   }
 
   static ThemeData _build(Brightness brightness) {
-    // Design system is dark-first; light mode uses softened dark palette.
     final isDark = brightness == Brightness.dark;
-    final bg = isDark ? GrokkerSurfaces.voidFloor : const Color(0xFFF0F2F6);
-    final surface = isDark ? GrokkerSurfaces.deepPanel : Colors.white;
-    final raised = isDark ? GrokkerSurfaces.raised : const Color(0xFFE8EBF0);
-    final border = isDark ? GrokkerColors.gunmetal : GrokkerColors.cloud;
-    final body = isDark ? GrokkerColors.fog : const Color(0xFF3D4654);
-    final heading = isDark ? GrokkerColors.white : const Color(0xFF0E1012);
-    final subtle = isDark ? GrokkerColors.ash : const Color(0xFF566171);
+
+    // Dark (default) = zinc terminal. Light (optional) = paper/snow.
+    final bg = isDark ? GrokkerSurfaces.voidFloor : GrokkerSurfaces.canvas;
+    final surface = isDark ? GrokkerSurfaces.deepPanel : GrokkerSurfaces.card;
+    final raised = isDark ? GrokkerSurfaces.raised : GrokkerSurfaces.subtleCard;
+    final border = isDark ? GrokkerColors.iron : GrokkerColors.cloud;
+    final body = isDark ? GrokkerColors.ash : GrokkerColors.graphite;
+    final heading = isDark ? GrokkerColors.snow : GrokkerColors.obsidian;
+    final subtle = isDark ? GrokkerColors.fog : GrokkerColors.steel;
+    final mono = isDark ? GrokkerColors.mist : GrokkerColors.graphite;
 
     final textTheme = GrokkerTypography.textTheme().apply(
       bodyColor: body,
@@ -41,14 +45,14 @@ class AppTheme {
       fontFamily: GrokkerTypography.fontFamily,
       colorScheme: ColorScheme(
         brightness: brightness,
-        primary: GrokkerColors.signalBlue,
-        onPrimary: GrokkerColors.white,
-        secondary: GrokkerColors.deepSignal,
-        onSecondary: GrokkerColors.white,
+        primary: GrokkerColors.ember,
+        onPrimary: GrokkerColors.snow,
+        secondary: isDark ? GrokkerColors.zincSlate : GrokkerColors.obsidian,
+        onSecondary: GrokkerColors.snow,
         surface: surface,
         onSurface: body,
-        error: GrokkerColors.slate,
-        onError: GrokkerColors.white,
+        error: GrokkerColors.errorRed,
+        onError: GrokkerColors.snow,
       ),
       dividerColor: border,
       textTheme: textTheme,
@@ -65,11 +69,12 @@ class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GrokkerRadius.card),
+          side: BorderSide(color: border),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? GrokkerSurfaces.raised : const Color(0xFFF5F6F8),
+        fillColor: isDark ? raised : GrokkerSurfaces.card,
         hintStyle: GrokkerTypography.bodySm(color: subtle),
         labelStyle: GrokkerTypography.caption(color: subtle),
         border: OutlineInputBorder(
@@ -82,10 +87,10 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(GrokkerRadius.input),
-          borderSide: const BorderSide(color: GrokkerColors.signalBlue, width: 1.5),
+          borderSide: const BorderSide(color: GrokkerColors.ember, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: GrokkerSpacing.s12,
+          horizontal: GrokkerSpacing.s16,
           vertical: GrokkerSpacing.s12,
         ),
       ),
@@ -101,57 +106,63 @@ class AppTheme {
       ),
       listTileTheme: ListTileThemeData(
         dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: GrokkerSpacing.s12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: GrokkerSpacing.s12,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GrokkerRadius.chip),
         ),
-        selectedTileColor: GrokkerColors.signalBlue.withValues(alpha: 0.15),
-        iconColor: GrokkerColors.fog,
+        selectedTileColor: GrokkerColors.ember.withValues(alpha: 0.12),
+        iconColor: subtle,
         textColor: body,
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: GrokkerSurfaces.overlay,
+        color: isDark ? raised : GrokkerSurfaces.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GrokkerRadius.chip),
+          side: BorderSide(color: border),
         ),
-        textStyle: GrokkerTypography.bodySm(),
+        textStyle: GrokkerTypography.bodySm(color: body),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: GrokkerSurfaces.deepPanel,
+        backgroundColor: surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GrokkerRadius.card),
+          side: BorderSide(color: border),
         ),
-        titleTextStyle: GrokkerTypography.headingSm(),
+        titleTextStyle: GrokkerTypography.headingSm(color: heading),
       ),
-      iconTheme: const IconThemeData(
-        color: GrokkerColors.fog,
-        size: 18,
-      ),
+      iconTheme: IconThemeData(color: subtle, size: 18),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return GrokkerColors.white;
+            return GrokkerColors.snow;
           }
-          return GrokkerColors.silver;
+          return isDark ? GrokkerColors.mist : GrokkerColors.steel;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return GrokkerColors.signalBlue;
+            return GrokkerColors.ember;
           }
-          return GrokkerColors.steel;
+          return isDark ? GrokkerColors.iron : GrokkerColors.mist;
         }),
       ),
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
       extensions: [
         GrokkerThemeExtension(
-          monoFamily: 'Menlo',
+          isDark: isDark,
+          monoFamily: 'JetBrains Mono',
+          canvas: bg,
+          panel: surface,
+          raised: raised,
           panelBorder: border,
-          accent: GrokkerColors.signalBlue,
+          accent: GrokkerColors.ember,
           subtleText: subtle,
           surfaceRaised: raised,
-          surfaceOverlay: isDark ? GrokkerSurfaces.overlay : const Color(0xFFE0E4EA),
+          surfaceOverlay: isDark ? GrokkerSurfaces.overlay : GrokkerColors.mist,
           bodyText: body,
           headingText: heading,
+          monoText: mono,
         ),
       ],
     );
@@ -160,7 +171,11 @@ class AppTheme {
 
 class GrokkerThemeExtension extends ThemeExtension<GrokkerThemeExtension> {
   const GrokkerThemeExtension({
+    required this.isDark,
     required this.monoFamily,
+    required this.canvas,
+    required this.panel,
+    required this.raised,
     required this.panelBorder,
     required this.accent,
     required this.subtleText,
@@ -168,9 +183,14 @@ class GrokkerThemeExtension extends ThemeExtension<GrokkerThemeExtension> {
     required this.surfaceOverlay,
     required this.bodyText,
     required this.headingText,
+    required this.monoText,
   });
 
+  final bool isDark;
   final String monoFamily;
+  final Color canvas;
+  final Color panel;
+  final Color raised;
   final Color panelBorder;
   final Color accent;
   final Color subtleText;
@@ -178,6 +198,7 @@ class GrokkerThemeExtension extends ThemeExtension<GrokkerThemeExtension> {
   final Color surfaceOverlay;
   final Color bodyText;
   final Color headingText;
+  final Color monoText;
 
   static GrokkerThemeExtension of(BuildContext context) {
     return Theme.of(context).extension<GrokkerThemeExtension>()!;
@@ -185,7 +206,11 @@ class GrokkerThemeExtension extends ThemeExtension<GrokkerThemeExtension> {
 
   @override
   GrokkerThemeExtension copyWith({
+    bool? isDark,
     String? monoFamily,
+    Color? canvas,
+    Color? panel,
+    Color? raised,
     Color? panelBorder,
     Color? accent,
     Color? subtleText,
@@ -193,9 +218,14 @@ class GrokkerThemeExtension extends ThemeExtension<GrokkerThemeExtension> {
     Color? surfaceOverlay,
     Color? bodyText,
     Color? headingText,
+    Color? monoText,
   }) {
     return GrokkerThemeExtension(
+      isDark: isDark ?? this.isDark,
       monoFamily: monoFamily ?? this.monoFamily,
+      canvas: canvas ?? this.canvas,
+      panel: panel ?? this.panel,
+      raised: raised ?? this.raised,
       panelBorder: panelBorder ?? this.panelBorder,
       accent: accent ?? this.accent,
       subtleText: subtleText ?? this.subtleText,
@@ -203,6 +233,7 @@ class GrokkerThemeExtension extends ThemeExtension<GrokkerThemeExtension> {
       surfaceOverlay: surfaceOverlay ?? this.surfaceOverlay,
       bodyText: bodyText ?? this.bodyText,
       headingText: headingText ?? this.headingText,
+      monoText: monoText ?? this.monoText,
     );
   }
 

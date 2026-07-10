@@ -25,9 +25,9 @@ class Sidebar extends StatelessWidget {
     required this.onNewSession,
     required this.onSelectSession,
     required this.onSearchChanged,
-    required this.onSettings,
     required this.onRenameSession,
     required this.onDeleteSession,
+    this.onToggleControls,
   });
 
   final WorkspaceInfo? workspace;
@@ -41,9 +41,9 @@ class Sidebar extends StatelessWidget {
   final VoidCallback onNewSession;
   final void Function(String id) onSelectSession;
   final void Function(String query) onSearchChanged;
-  final VoidCallback onSettings;
   final void Function(String id, String title) onRenameSession;
   final void Function(String id) onDeleteSession;
+  final VoidCallback? onToggleControls;
 
   @override
   Widget build(BuildContext context) {
@@ -51,39 +51,39 @@ class Sidebar extends StatelessWidget {
 
     return Container(
       width: GrokkerSpacing.sidebarWidth,
-      decoration: const BoxDecoration(
-        color: GrokkerSurfaces.voidFloor,
-        border: Border(
-          right: BorderSide(color: Color(0x18FFFFFF)),
-        ),
+      decoration: BoxDecoration(
+        color: theme.panel,
+        border: Border(right: BorderSide(color: theme.panelBorder)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _BrandHeader(onSettings: onSettings, theme: theme),
+          _BrandHeader(theme: theme, onToggleControls: onToggleControls),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: GrokkerSpacing.s16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 _WorkspaceCard(
                   workspace: workspace,
                   onOpenWorkspace: onOpenWorkspace,
                   theme: theme,
                 ),
-                const SizedBox(height: GrokkerSpacing.s20),
+                const SizedBox(height: 12),
                 GrokkerSearchField(
+                  key: const ValueKey('search_sessions'),
                   hint: 'Search sessions',
                   onChanged: onSearchChanged,
                 ),
-                const SizedBox(height: GrokkerSpacing.s12),
+                const SizedBox(height: 8),
                 GrokkerPrimaryButton(
+                  key: const ValueKey('new_session'),
                   label: 'New session',
                   icon: Icons.add_rounded,
                   dense: true,
                   expanded: true,
                   onPressed: onNewSession,
                 ),
-                const SizedBox(height: GrokkerSpacing.s24),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     const GrokkerEyebrow('Sessions'),
@@ -94,10 +94,12 @@ class Sidebar extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: GrokkerSpacing.s12),
+                const SizedBox(height: 8),
                 if (sessions.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: GrokkerSpacing.s24),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: GrokkerSpacing.s24,
+                    ),
                     child: Center(
                       child: Column(
                         children: [
@@ -109,7 +111,9 @@ class Sidebar extends StatelessWidget {
                           const SizedBox(height: GrokkerSpacing.s8),
                           Text(
                             'No sessions yet',
-                            style: GrokkerTypography.bodySm(color: GrokkerColors.slate),
+                            style: GrokkerTypography.bodySm(
+                              color: GrokkerColors.slate,
+                            ),
                           ),
                         ],
                       ),
@@ -168,10 +172,10 @@ class Sidebar extends StatelessWidget {
 }
 
 class _BrandHeader extends StatelessWidget {
-  const _BrandHeader({required this.onSettings, required this.theme});
+  const _BrandHeader({required this.theme, this.onToggleControls});
 
-  final VoidCallback onSettings;
   final GrokkerThemeExtension theme;
+  final VoidCallback? onToggleControls;
 
   @override
   Widget build(BuildContext context) {
@@ -181,42 +185,39 @@ class _BrandHeader extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: GrokkerSpacing.s16),
         child: Row(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(GrokkerRadius.badge),
-                boxShadow: GrokkerShadows.glow(GrokkerColors.signalBlue, blur: 10),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(GrokkerRadius.badge),
-                child: Image.asset(
-                  'assets/branding/grokker_logo_48.png',
-                  width: 30,
-                  height: 30,
-                  fit: BoxFit.cover,
-                ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(GrokkerRadius.input),
+              child: Image.asset(
+                'assets/branding/grokker_logo_48.png',
+                width: 30,
+                height: 30,
+                fit: BoxFit.cover,
               ),
             ),
             const SizedBox(width: GrokkerSpacing.s12),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Grokker',
-                  style: GrokkerTypography.label(color: theme.headingText),
-                ),
-                Text(
-                  'Build with Grok',
-                  style: GrokkerTypography.caption(color: GrokkerColors.slate),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Grokker',
+                    style: GrokkerTypography.label(color: theme.headingText),
+                  ),
+                  Text(
+                    'interactive terminal',
+                    style: GrokkerTypography.caption(color: GrokkerColors.fog),
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
-            GrokkerIconFrameButton(
-              icon: Icons.settings_outlined,
-              tooltip: 'Settings',
-              onPressed: onSettings,
-            ),
+            if (onToggleControls != null)
+              GrokkerIconFrameButton(
+                icon: Icons.tune_rounded,
+                tooltip: 'Controls (Ctrl+Shift+I)',
+                accent: true,
+                onPressed: onToggleControls,
+              ),
           ],
         ),
       ),
@@ -255,8 +256,12 @@ class _WorkspaceCard extends StatelessWidget {
           Row(
             children: [
               GrokkerAvatar(
-                icon: hasWorkspace ? Icons.folder_rounded : Icons.folder_off_outlined,
-                color: hasWorkspace ? GrokkerColors.signalBlue : GrokkerColors.slate,
+                icon: hasWorkspace
+                    ? Icons.folder_rounded
+                    : Icons.folder_off_outlined,
+                color: hasWorkspace
+                    ? GrokkerColors.signalBlue
+                    : GrokkerColors.slate,
                 size: 36,
               ),
               const SizedBox(width: GrokkerSpacing.s12),
@@ -289,7 +294,10 @@ class _WorkspaceCard extends StatelessWidget {
               ),
               child: Text(
                 workspace!.path,
-                style: GrokkerTypography.mono(size: 10, color: theme.subtleText),
+                style: GrokkerTypography.mono(
+                  size: 10,
+                  color: theme.subtleText,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -305,6 +313,7 @@ class _WorkspaceCard extends StatelessWidget {
           ],
           const SizedBox(height: GrokkerSpacing.s12),
           GrokkerOutlinedButton(
+            key: const ValueKey('open_workspace'),
             label: hasWorkspace ? 'Change folder' : 'Open folder',
             icon: Icons.folder_open_rounded,
             dense: true,
@@ -337,47 +346,36 @@ class _SessionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: GrokkerSpacing.s8),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Material(
         color: selected
-            ? GrokkerColors.signalBlue.withValues(alpha: 0.1)
-            : GrokkerSurfaces.deepPanel,
+            ? GrokkerColors.ember.withValues(alpha: 0.08)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(GrokkerRadius.chip),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(GrokkerRadius.chip),
-          hoverColor: GrokkerColors.signalBlue.withValues(alpha: 0.06),
+          hoverColor: GrokkerColors.ember.withValues(alpha: 0.05),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(GrokkerRadius.chip),
               border: Border.all(
                 color: selected
-                    ? GrokkerColors.signalBlue.withValues(alpha: 0.35)
-                    : GrokkerColors.gunmetal,
+                    ? GrokkerColors.ember.withValues(alpha: 0.4)
+                    : theme.panelBorder,
               ),
             ),
             child: IntrinsicHeight(
               child: Row(
                 children: [
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 3,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.horizontal(
-                        left: Radius.circular(GrokkerRadius.chip),
-                      ),
-                      gradient: selected ? GrokkerGradients.accentStrip : null,
-                      color: selected ? null : Colors.transparent,
-                    ),
+                    duration: const Duration(milliseconds: 120),
+                    width: 2,
+                    color: selected ? GrokkerColors.ember : Colors.transparent,
                   ),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        GrokkerSpacing.s12,
-                        GrokkerSpacing.s8,
-                        GrokkerSpacing.s4,
-                        GrokkerSpacing.s8,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(10, 8, 2, 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -385,33 +383,19 @@ class _SessionTile extends StatelessWidget {
                             session.title,
                             style: GrokkerTypography.bodySm(
                               color: selected
-                                  ? GrokkerColors.white
+                                  ? GrokkerColors.snow
                                   : theme.bodyText,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: GrokkerSpacing.s4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.schedule_rounded,
-                                size: 10,
-                                color: GrokkerColors.slate,
-                              ),
-                              const SizedBox(width: GrokkerSpacing.s4),
-                              Text(
-                                _formatRelative(session.updatedAt),
-                                style: GrokkerTypography.caption(),
-                              ),
-                              if (session.messages.isNotEmpty) ...[
-                                const SizedBox(width: GrokkerSpacing.s8),
-                                GrokkerMetaChip(
-                                  label: '${session.messages.length}',
-                                  icon: Icons.chat_outlined,
-                                ),
-                              ],
-                            ],
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_formatRelative(session.updatedAt)}'
+                            '${session.messages.isNotEmpty ? ' · ${session.messages.length} msgs' : ''}',
+                            style: GrokkerTypography.caption(
+                              color: GrokkerColors.fog,
+                            ),
                           ),
                         ],
                       ),
@@ -421,11 +405,12 @@ class _SessionTile extends StatelessWidget {
                     icon: Icon(
                       Icons.more_horiz_rounded,
                       size: 16,
-                      color: GrokkerColors.slate,
+                      color: GrokkerColors.fog,
                     ),
-                    color: GrokkerSurfaces.overlay,
+                    color: theme.raised,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(GrokkerRadius.chip),
+                      side: BorderSide(color: theme.panelBorder),
                     ),
                     onSelected: (value) {
                       if (value == 'rename') onRename();
@@ -434,25 +419,18 @@ class _SessionTile extends StatelessWidget {
                     itemBuilder: (_) => [
                       PopupMenuItem(
                         value: 'rename',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.edit_outlined, size: 16),
-                            const SizedBox(width: GrokkerSpacing.s8),
-                            Text('Rename', style: GrokkerTypography.bodySm()),
-                          ],
+                        child: Text(
+                          'Rename',
+                          style: GrokkerTypography.bodySm(),
                         ),
                       ),
                       PopupMenuItem(
                         value: 'delete',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.delete_outline, size: 16, color: GrokkerColors.errorRed),
-                            const SizedBox(width: GrokkerSpacing.s8),
-                            Text(
-                              'Delete',
-                              style: GrokkerTypography.bodySm(color: GrokkerColors.errorRed),
-                            ),
-                          ],
+                        child: Text(
+                          'Delete',
+                          style: GrokkerTypography.bodySm(
+                            color: GrokkerColors.errorRed,
+                          ),
                         ),
                       ),
                     ],

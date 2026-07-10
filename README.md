@@ -1,12 +1,12 @@
 # Grokker
 
-Grokker is an open-source macOS and Windows Flutter desktop application that exposes your SuperGrok subscription through the official **Grok Build CLI** installed on your local machine.
+Grokker is an open-source macOS and Windows Flutter desktop app that wraps your SuperGrok subscription through the official **Grok Build CLI** on your machine.
 
-It is a local-first Grok Build GUI for developers who want to use SuperGrok outside the terminal — similar in spirit to Codex, OpenCode, Zed Agent Panel, and the Grok Build Community VS Code extension, but focused solely on Grok Build CLI + SuperGrok.
+It is a **local-first interactive terminal** for Grok Build — fast scrollback + prompt (not a chatbot bubble UI). Paste or drop images and files, keep sessions and workspace memory, and stream agent output like a real terminal.
 
 ## Requirements
 
-- Flutter SDK 3.12+ with desktop support enabled
+- Flutter SDK **3.11+** with desktop support enabled (tested on Flutter 3.41 / Dart 3.11)
 - macOS or Windows
 - [Grok Build CLI](https://docs.x.ai/build/cli) installed and authenticated
 - Active SuperGrok subscription (managed by xAI via the CLI)
@@ -33,11 +33,38 @@ flutter run -d macos
 
 ## Run on Windows
 
-```bash
-cd C:\path\to\grokker
+```powershell
+cd C:\Users\hanif\StudioProjects\grokker
 flutter pub get
 flutter run -d windows
 ```
+
+### Terminal UX
+
+- Main pane is a **scrollback + prompt** (not chat bubbles)
+- Prefixes: `❯` you · `grok` assistant · `⚙` tools · `!` errors
+- **Paste** images/files (Ctrl+V) · **drag-and-drop** onto the terminal
+- Enter sends · Esc cancels · Ctrl+L focuses prompt
+- **Controls rail** (right): all settings live here — no separate settings screen  
+  Toggle with **Ctrl+Shift+I** or **Ctrl+,**, or the tune icon in the sidebar
+- Streaming is throttled and does **not** rewrite session disk on every token
+
+### Design system
+
+Tokens live under `styles/` (`DESIGN.md`, `tokens.json`, `theme.css`, `variables.css`) — zinc neutrals + ember accent (`#ff5a00`). Flutter maps them in `lib/styles/design_tokens.dart`.
+
+### Marionette (AI UI driving)
+
+Debug builds register **Marionette** so agents can screenshot / tap / type in the live Windows app.
+
+```powershell
+flutter run -d windows --debug
+# then use VM service URI with:
+marionette register grokker ws://127.0.0.1:PORT/TOKEN=/ws
+marionette --uri ws://... take-screenshots --output shot.png
+```
+
+See [docs/MARIONETTE.md](docs/MARIONETTE.md). Grok MCP: `[mcp_servers.marionette]` in `~/.grok/config.toml` or `.grok/config.toml`.
 
 ## How ACP integration works
 

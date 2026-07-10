@@ -43,6 +43,9 @@ app.*.map.json
 .grokker/
 *.grokker-cache
 
+# Marionette runtime captures
+marionette_captures/
+
 # Logs
 logs/
 *.stderr.log

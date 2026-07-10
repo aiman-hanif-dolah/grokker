@@ -86,7 +86,7 @@ class AppSession extends Equatable {
     'title': title,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
-    'selectedModel': selectedModel.name,
+    'selectedModel': selectedModel.id,
     'selectedEffort': selectedEffort.name,
     'messages': messages.map((m) => m.toJson()).toList(),
     'attachments': attachments.map((a) => a.toJson()).toList(),
@@ -108,7 +108,7 @@ class AppSession extends Equatable {
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       selectedModel:
           GrokModelX.fromString(json['selectedModel'] as String?) ??
-          GrokModel.grokBuild01,
+          GrokModel.defaultModel,
       selectedEffort:
           ThinkingEffortX.fromString(json['selectedEffort'] as String?) ??
           ThinkingEffort.auto,

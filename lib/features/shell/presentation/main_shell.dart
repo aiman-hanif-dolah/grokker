@@ -7,11 +7,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../app/service_locator.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../shared/models/app_settings.dart';
 import '../../../shared/models/attachment_item.dart';
 import '../../../shared/models/chat_message.dart';
 import '../../../shared/widgets/error_banner.dart';
-import '../../../shared/widgets/file_drop_scope.dart';
+import '../../../app/app_theme.dart';
 import '../../../styles/design_tokens.dart';
 import '../../../styles/grokker_components.dart';
 import '../../../styles/grokker_typography.dart';
@@ -19,18 +18,18 @@ import '../../acp/presentation/cubit/acp_connection_cubit.dart';
 import '../../acp/presentation/cubit/grok_cli_cubit.dart';
 import '../../attachments/presentation/cubit/attachment_cubit.dart';
 import '../../chat/presentation/cubit/chat_cubit.dart';
-import '../../chat/presentation/widgets/chat_message_tile.dart';
-import '../../chat/presentation/widgets/composer.dart';
 import '../../diagnostics/presentation/cubit/diagnostics_cubit.dart';
 import '../../diagnostics/presentation/widgets/diagnostics_panel.dart';
 import '../../diagnostics/presentation/widgets/inspector_panel.dart';
 import '../../diff_viewer/presentation/cubit/diff_cubit.dart';
-import '../../goal/presentation/cubit/goal_cubit.dart';
 import '../../sessions/domain/models/app_session.dart';
 import '../../sessions/presentation/cubit/session_cubit.dart';
 import '../../sessions/presentation/widgets/sidebar.dart';
+import '../../goal/presentation/cubit/goal_cubit.dart';
+import '../../models/presentation/cubit/models_cubit.dart';
+import '../../multitask/presentation/cubit/multitask_cubit.dart';
 import '../../settings/presentation/cubit/settings_cubit.dart';
-import '../../settings/presentation/settings_screen.dart';
+import '../../terminal/presentation/widgets/terminal_view.dart';
 import '../../workspace/presentation/cubit/workspace_cubit.dart';
 
 class MainShell extends StatefulWidget {
@@ -79,6 +78,8 @@ class _MainShellState extends State<MainShell> {
         BlocProvider.value(value: _locator.diagnosticsCubit),
         BlocProvider.value(value: _locator.diffCubit),
         BlocProvider.value(value: _locator.goalCubit),
+        BlocProvider.value(value: _locator.multitaskCubit),
+        BlocProvider.value(value: _locator.modelsCubit),
       ],
       child: CallbackShortcuts(
         bindings: _shortcuts(),
@@ -108,186 +109,299 @@ class _MainShellState extends State<MainShell> {
                   final session = sessionState.activeSession;
 
                   return Scaffold(
-                backgroundColor: GrokkerSurfaces.voidFloor,
-                body: Column(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          BlocBuilder<GrokCliCubit, GrokCliState>(
-                            builder: (context, cli) {
-                              return BlocBuilder<
-                                AcpConnectionCubit,
-                                AcpConnectionState
-                              >(
-                                builder: (context, acp) {
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                    body: Column(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              BlocBuilder<GrokCliCubit, GrokCliState>(
+                                builder: (context, cli) {
                                   return BlocBuilder<
-                                    WorkspaceCubit,
-                                    WorkspaceState
+                                    AcpConnectionCubit,
+                                    AcpConnectionState
                                   >(
-                                    builder: (context, ws) {
-                                      return Sidebar(
-                                        workspace: ws.workspace,
-                                        sessions: sessionState.filteredSessions,
-                                        activeSessionId:
-                                            sessionState.activeSessionId,
-                                        searchQuery: sessionState.searchQuery,
-                                        processStatus: acp.processStatus,
-                                        model:
-                                            session?.selectedModel ??
-                                            _locator
-                                                .settingsCubit
-                                                .state
-                                                .settings
-                                                .defaultModel,
-                                        effort:
-                                            session?.selectedEffort ??
-                                            _locator
-                                                .settingsCubit
-                                                .state
-                                                .settings
-                                                .defaultEffort,
-                                        onOpenWorkspace: () =>
-                                            _openWorkspace(context),
-                                        onNewSession: () =>
-                                            _newSession(context),
-                                        onSelectSession: (id) => context
-                                            .read<SessionCubit>()
-                                            .selectSession(id),
-                                        onSearchChanged: (q) => context
-                                            .read<SessionCubit>()
-                                            .setSearchQuery(q),
-                                        onSettings: () =>
-                                            _openSettings(context),
-                                        onRenameSession: (id, title) => context
-                                            .read<SessionCubit>()
-                                            .renameSession(id, title),
-                                        onDeleteSession: (id) => context
-                                            .read<SessionCubit>()
-                                            .deleteSession(id),
-                                      );
-                                    },
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                          Expanded(child: _chatArea(session)),
-                          BlocBuilder<DiagnosticsCubit, DiagnosticsState>(
-                            builder: (context, diag) {
-                              return BlocBuilder<DiffCubit, DiffState>(
-                                builder: (context, diffState) {
-                                  return BlocBuilder<
-                                    AttachmentCubit,
-                                    AttachmentState
-                                  >(
-                                    builder: (context, att) {
+                                    builder: (context, acp) {
                                       return BlocBuilder<
                                         WorkspaceCubit,
                                         WorkspaceState
                                       >(
                                         builder: (context, ws) {
+                                          return Sidebar(
+                                            workspace: ws.workspace,
+                                            sessions:
+                                                sessionState.filteredSessions,
+                                            activeSessionId:
+                                                sessionState.activeSessionId,
+                                            searchQuery:
+                                                sessionState.searchQuery,
+                                            processStatus: acp.processStatus,
+                                            model:
+                                                session?.selectedModel ??
+                                                _locator
+                                                    .settingsCubit
+                                                    .state
+                                                    .settings
+                                                    .defaultModel,
+                                            effort:
+                                                session?.selectedEffort ??
+                                                _locator
+                                                    .settingsCubit
+                                                    .state
+                                                    .settings
+                                                    .defaultEffort,
+                                            onOpenWorkspace: () =>
+                                                _openWorkspace(context),
+                                            onNewSession: () =>
+                                                _newSession(context),
+                                            onSelectSession: (id) => context
+                                                .read<SessionCubit>()
+                                                .selectSession(id),
+                                            onSearchChanged: (q) => context
+                                                .read<SessionCubit>()
+                                                .setSearchQuery(q),
+                                            onRenameSession: (id, title) =>
+                                                context
+                                                    .read<SessionCubit>()
+                                                    .renameSession(id, title),
+                                            onDeleteSession: (id) => context
+                                                .read<SessionCubit>()
+                                                .deleteSession(id),
+                                            onToggleControls: () => setState(
+                                              () => _inspectorVisible =
+                                                  !_inspectorVisible,
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                              Expanded(child: _chatArea(session)),
+                              BlocBuilder<DiagnosticsCubit, DiagnosticsState>(
+                                builder: (context, diag) {
+                                  return BlocBuilder<DiffCubit, DiffState>(
+                                    builder: (context, diffState) {
+                                      return BlocBuilder<
+                                        AttachmentCubit,
+                                        AttachmentState
+                                      >(
+                                        builder: (context, att) {
                                           return BlocBuilder<
-                                            AcpConnectionCubit,
-                                            AcpConnectionState
+                                            WorkspaceCubit,
+                                            WorkspaceState
                                           >(
-                                            builder: (context, acp) {
+                                            builder: (context, ws) {
                                               return BlocBuilder<
-                                                GrokCliCubit,
-                                                GrokCliState
+                                                AcpConnectionCubit,
+                                                AcpConnectionState
                                               >(
-                                                builder: (context, cli) {
+                                                builder: (context, acp) {
                                                   return BlocBuilder<
-                                                    ChatCubit,
-                                                    ChatState
+                                                    GrokCliCubit,
+                                                    GrokCliState
                                                   >(
-                                                    builder: (context, chat) {
-                                                      return InspectorPanel(
-                                                        visible:
-                                                            _inspectorVisible,
-                                                        workspace: ws.workspace,
-                                                        model:
-                                                            session
-                                                                ?.selectedModel ??
-                                                            _locator
-                                                                .settingsCubit
-                                                                .state
-                                                                .settings
-                                                                .defaultModel,
-                                                        effort:
-                                                            session
-                                                                ?.selectedEffort ??
-                                                            _locator
-                                                                .settingsCubit
-                                                                .state
-                                                                .settings
-                                                                .defaultEffort,
-                                                        attachments:
-                                                            att.attachments,
-                                                        acpSessionId: session
-                                                            ?.acpSessionId,
-                                                        diffs: diffState.files,
-                                                        selectedDiff:
-                                                            diffState.selected,
-                                                        pendingPermission: chat
-                                                            .pendingPermission,
-                                                        diagnostics: diag,
-                                                        processStatus: acp
-                                                            .processStatus
-                                                            .state
-                                                            .name,
-                                                        initialized:
-                                                            acp.initialized,
-                                                        grokVersion:
-                                                            cli.version,
-                                                        grokPath:
-                                                            cli.resolvedPath,
-                                                        lastError:
-                                                            acp.lastError ??
-                                                            chat
-                                                                .lastError
-                                                                ?.message,
-                                                        onModelChanged: (m) =>
-                                                            context
-                                                                .read<
-                                                                  ChatCubit
-                                                                >()
-                                                                .setModel(m),
-                                                        onEffortChanged: (e) =>
-                                                            context
-                                                                .read<
-                                                                  ChatCubit
-                                                                >()
-                                                                .setEffort(e),
-                                                        onSelectDiff: (id) =>
-                                                            context
-                                                                .read<
-                                                                  DiffCubit
-                                                                >()
-                                                                .select(id),
-                                                        onApprovePermission:
-                                                            () => context
-                                                                .read<
-                                                                  ChatCubit
-                                                                >()
-                                                                .respondToPermission(
-                                                                  true,
-                                                                ),
-                                                        onDenyPermission: () =>
-                                                            context
-                                                                .read<
-                                                                  ChatCubit
-                                                                >()
-                                                                .respondToPermission(
-                                                                  false,
-                                                                ),
-                                                        onCopyDiff: () {},
-                                                        onToggleDiagnostics:
-                                                            () => context
-                                                                .read<
-                                                                  DiagnosticsCubit
-                                                                >()
-                                                                .toggle(),
+                                                    builder: (context, cli) {
+                                                      return BlocBuilder<
+                                                        ChatCubit,
+                                                        ChatState
+                                                      >(
+                                                        builder: (context, chat) {
+                                                          return BlocBuilder<
+                                                            SettingsCubit,
+                                                            SettingsState
+                                                          >(
+                                                            builder:
+                                                                (
+                                                                  context,
+                                                                  settingsState,
+                                                                ) {
+                                                                  return BlocBuilder<
+                                                                    ModelsCubit,
+                                                                    ModelsState
+                                                                  >(
+                                                                    builder:
+                                                                        (
+                                                                          context,
+                                                                          modelsState,
+                                                                        ) {
+                                                                          return BlocBuilder<
+                                                                            GoalCubit,
+                                                                            GoalState
+                                                                          >(
+                                                                            builder:
+                                                                                (
+                                                                                  context,
+                                                                                  goalState,
+                                                                                ) {
+                                                                                  return BlocBuilder<
+                                                                                    MultitaskCubit,
+                                                                                    MultitaskState
+                                                                                  >(
+                                                                                    builder:
+                                                                                        (
+                                                                                          context,
+                                                                                          multiState,
+                                                                                        ) {
+                                                                                          return InspectorPanel(
+                                                                                            visible: _inspectorVisible,
+                                                                                            workspace: ws.workspace,
+                                                                                            model:
+                                                                                                session?.selectedModel ??
+                                                                                                settingsState.settings.defaultModel,
+                                                                                            availableModels: modelsState.models,
+                                                                                            effort:
+                                                                                                session?.selectedEffort ??
+                                                                                                settingsState.settings.defaultEffort,
+                                                                                            settings: settingsState.settings,
+                                                                                            goalState: goalState,
+                                                                                            multitaskState: multiState,
+                                                                                            onStopGoal: () => context
+                                                                                                .read<
+                                                                                                  GoalCubit
+                                                                                                >()
+                                                                                                .stopGoal(),
+                                                                                            onToggleMultitask: () => _toggleMultitaskExclusive(
+                                                                                              context,
+                                                                                            ),
+                                                                                            onToggleSubagents:
+                                                                                                (
+                                                                                                  v,
+                                                                                                ) => context
+                                                                                                    .read<
+                                                                                                      MultitaskCubit
+                                                                                                    >()
+                                                                                                    .setUseSubagents(
+                                                                                                      v,
+                                                                                                    ),
+                                                                                            onQueueMultitaskFromText:
+                                                                                                (
+                                                                                                  bulk,
+                                                                                                ) => context
+                                                                                                    .read<
+                                                                                                      MultitaskCubit
+                                                                                                    >()
+                                                                                                    .enqueueFromBulk(
+                                                                                                      bulk,
+                                                                                                    ),
+                                                                                            onClearMultitaskQueue: () => context
+                                                                                                .read<
+                                                                                                  MultitaskCubit
+                                                                                                >()
+                                                                                                .clearQueue(),
+                                                                                            onRunMultitaskQueue: () => context
+                                                                                                .read<
+                                                                                                  ChatCubit
+                                                                                                >()
+                                                                                                .runNextMultitask(),
+                                                                                            attachments: att.attachments,
+                                                                                            acpSessionId: session?.acpSessionId,
+                                                                                            diffs: diffState.files,
+                                                                                            selectedDiff: diffState.selected,
+                                                                                            pendingPermission: chat.pendingPermission,
+                                                                                            diagnostics: diag,
+                                                                                            processStatus: acp.processStatus.state.name,
+                                                                                            initialized: acp.initialized,
+                                                                                            grokVersion: cli.version,
+                                                                                            grokPath: cli.resolvedPath,
+                                                                                            lastError:
+                                                                                                acp.lastError ??
+                                                                                                chat.lastError?.message,
+                                                                                            onModelChanged:
+                                                                                                (
+                                                                                                  m,
+                                                                                                ) => context
+                                                                                                    .read<
+                                                                                                      ChatCubit
+                                                                                                    >()
+                                                                                                    .setModel(
+                                                                                                      m,
+                                                                                                    ),
+                                                                                            onEffortChanged:
+                                                                                                (
+                                                                                                  e,
+                                                                                                ) => context
+                                                                                                    .read<
+                                                                                                      ChatCubit
+                                                                                                    >()
+                                                                                                    .setEffort(
+                                                                                                      e,
+                                                                                                    ),
+                                                                                            onSettingsChanged:
+                                                                                                (
+                                                                                                  s,
+                                                                                                ) async {
+                                                                                                  await context
+                                                                                                      .read<
+                                                                                                        SettingsCubit
+                                                                                                      >()
+                                                                                                      .update(
+                                                                                                        s,
+                                                                                                      );
+                                                                                                  _locator.clientRequestHandler.approvalMode = s.approvalMode;
+                                                                                                },
+                                                                                            onSelectDiff:
+                                                                                                (
+                                                                                                  id,
+                                                                                                ) => context
+                                                                                                    .read<
+                                                                                                      DiffCubit
+                                                                                                    >()
+                                                                                                    .select(
+                                                                                                      id,
+                                                                                                    ),
+                                                                                            onApprovePermission: () => context
+                                                                                                .read<
+                                                                                                  ChatCubit
+                                                                                                >()
+                                                                                                .respondToPermission(
+                                                                                                  true,
+                                                                                                ),
+                                                                                            onDenyPermission: () => context
+                                                                                                .read<
+                                                                                                  ChatCubit
+                                                                                                >()
+                                                                                                .respondToPermission(
+                                                                                                  false,
+                                                                                                ),
+                                                                                            onCopyDiff: () {
+                                                                                              final diff = diffState.selected;
+                                                                                              if (diff ==
+                                                                                                  null) {
+                                                                                                return;
+                                                                                              }
+                                                                                              Clipboard.setData(
+                                                                                                ClipboardData(
+                                                                                                  text: diff.unifiedDiff,
+                                                                                                ),
+                                                                                              );
+                                                                                            },
+                                                                                            onToggleDiagnostics: () => context
+                                                                                                .read<
+                                                                                                  DiagnosticsCubit
+                                                                                                >()
+                                                                                                .toggle(),
+                                                                                            onResetSettings: () async {
+                                                                                              await context
+                                                                                                  .read<
+                                                                                                    SettingsCubit
+                                                                                                  >()
+                                                                                                  .reset();
+                                                                                            },
+                                                                                            onCollapse: () => setState(
+                                                                                              () => _inspectorVisible = false,
+                                                                                            ),
+                                                                                          );
+                                                                                        },
+                                                                                  );
+                                                                                },
+                                                                          );
+                                                                        },
+                                                                  );
+                                                                },
+                                                          );
+                                                        },
                                                       );
                                                     },
                                                   );
@@ -300,27 +414,25 @@ class _MainShellState extends State<MainShell> {
                                     },
                                   );
                                 },
-                              );
-                            },
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        BlocBuilder<DiagnosticsCubit, DiagnosticsState>(
+                          builder: (context, diag) {
+                            return DiagnosticsPanel(
+                              state: diag,
+                              onRestart: () => _restartGrok(context),
+                              onClose: () => context
+                                  .read<DiagnosticsCubit>()
+                                  .setVisible(false),
+                            );
+                          },
+                        ),
+                        _statusBar(context, session),
+                      ],
                     ),
-                    BlocBuilder<DiagnosticsCubit, DiagnosticsState>(
-                      builder: (context, diag) {
-                        return DiagnosticsPanel(
-                          state: diag,
-                          onRestart: () => _restartGrok(context),
-                          onClose: () => context
-                              .read<DiagnosticsCubit>()
-                              .setVisible(false),
-                        );
-                      },
-                    ),
-                    _statusBar(context, session),
-                  ],
-                ),
-              );
+                  );
                 },
               ),
             ),
@@ -331,140 +443,102 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _chatArea(AppSession? session) {
-    return FileDropScope(
-      onDraggingChanged: (dragging) {
-        if (_isDraggingFiles != dragging) {
-          setState(() => _isDraggingFiles = dragging);
-        }
-      },
-      onFilesDropped: (files) {
-        final settings = context.read<SettingsCubit>().state.settings;
-        context.read<AttachmentCubit>().addDropItems(
-          files,
-          warningThreshold: settings.attachmentWarningBytes,
-        );
-        _composerFocus.requestFocus();
-      },
-      child: Container(
-        decoration: const BoxDecoration(
-          color: GrokkerSurfaces.voidFloor,
-          border: Border(
-            left: BorderSide(color: Color(0x10FFFFFF)),
-            right: BorderSide(color: Color(0x10FFFFFF)),
-          ),
-        ),
-        child: Column(
-      children: [
-        Expanded(
-          child: BlocBuilder<ChatCubit, ChatState>(
-            builder: (context, chat) {
-              final hiddenTools = context
-                  .read<SettingsCubit>()
-                  .state
-                  .settings
-                  .hiddenTools;
-              final filteredMessages = session?.messages.where((m) {
-                if (m.role != ChatMessageRole.tool) return true;
-                final toolName = (m.title ?? '').toLowerCase();
-                return !hiddenTools.contains(toolName);
-              }).toList() ?? [];
+    return BlocBuilder<ChatCubit, ChatState>(
+      builder: (context, chat) {
+        return BlocBuilder<AttachmentCubit, AttachmentState>(
+          builder: (context, att) {
+            return BlocBuilder<SettingsCubit, SettingsState>(
+              builder: (context, settingsState) {
+                final settings = settingsState.settings;
+                final hiddenTools = settings.hiddenTools;
+                final filteredMessages =
+                    session?.messages.where((m) {
+                      if (m.role != ChatMessageRole.tool) return true;
+                      final toolName = (m.title ?? '').toLowerCase();
+                      return !hiddenTools.contains(toolName);
+                    }).toList() ??
+                    const <ChatMessage>[];
 
-              return Column(
-                children: [
-                  if (chat.lastError != null)
-                    ErrorBanner(error: chat.lastError!),
-                  Expanded(
-                    child: session == null
-                        ? _EmptyWorkspaceState(
-                            onOpenWorkspace: () => _openWorkspace(context),
-                          )
-                        : filteredMessages.isEmpty && session.messages.any((m) =>
-                              m.role == ChatMessageRole.tool &&
-                              hiddenTools.contains(
-                                (m.title ?? '').toLowerCase(),
-                              ))
-                            ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(GrokkerSpacing.s24),
-                                  child: Text(
-                                    'All tools hidden. Open Settings → Tools to unhide them.',
-                                    style: GrokkerTypography.bodySm(
-                                      color: GrokkerColors.fog,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              )
-                            : filteredMessages.isEmpty
-                            ? _EmptyChatState(sessionTitle: session.title)
-                        : Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                maxWidth: GrokkerSpacing.chatMaxWidth + 96,
-                              ),
-                              child: ListView.builder(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: GrokkerSpacing.s24,
-                                  vertical: GrokkerSpacing.s20,
-                                ),
-                                itemCount: filteredMessages.length,
-                                itemBuilder: (_, i) =>
-                                    ChatMessageTile(message: filteredMessages[i]),
-                              ),
-                            ),
-                          ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-        BlocBuilder<ChatCubit, ChatState>(
-          builder: (context, chat) {
-            return BlocBuilder<AttachmentCubit, AttachmentState>(
-              builder: (context, att) {
-                return BlocBuilder<SettingsCubit, SettingsState>(
-                  builder: (context, settings) {
-                    return BlocBuilder<GoalCubit, GoalState>(
-                      builder: (context, goal) {
-                        return Composer(
+                final wsPath = context
+                    .watch<WorkspaceCubit>()
+                    .state
+                    .workspace
+                    ?.path;
+                final cwdLabel = wsPath == null || wsPath.isEmpty
+                    ? null
+                    : '$wsPath ›';
+
+                return BlocBuilder<GoalCubit, GoalState>(
+                  builder: (context, goal) {
+                    return BlocBuilder<MultitaskCubit, MultitaskState>(
+                      builder: (context, multi) {
+                        return TerminalView(
+                          messages: filteredMessages,
                           controller: _composerController,
                           focusNode: _composerFocus,
                           attachments: att.attachments,
+                          attachmentStatus: att.statusMessage,
                           isStreaming: chat.isStreaming,
                           isDraggingFiles: _isDraggingFiles,
-                          settings: settings.settings,
+                          settings: settings,
+                          cwdLabel: cwdLabel,
+                          sessionTitle: session?.title,
+                          hasWorkspace:
+                              session != null ||
+                              (wsPath != null && wsPath.isNotEmpty),
+                          onOpenWorkspace: () => _openWorkspace(context),
+                          errorBanner: chat.lastError != null
+                              ? ErrorBanner(error: chat.lastError!)
+                              : null,
                           isGoalActive: goal.isActive,
                           goalIteration: goal.iteration,
-                          onToggleGoal: () {
-                            final cubit = context.read<GoalCubit>();
-                            if (goal.isActive) {
-                              cubit.stopGoal();
-                            } else {
-                              final text = _composerController.text.trim();
-                              if (text.isNotEmpty) {
-                                cubit.startGoal(text);
-                              }
+                          goalStatus: goal.lastStatus,
+                          onToggleGoal: () => _toggleGoalExclusive(
+                            context,
+                            isStreaming: chat.isStreaming,
+                          ),
+                          isMultitaskActive: multi.enabled,
+                          multitaskQueued: multi.queuedCount,
+                          onToggleMultitask: () =>
+                              _toggleMultitaskExclusive(context),
+                          onDraggingChanged: (dragging) {
+                            if (_isDraggingFiles != dragging) {
+                              setState(() => _isDraggingFiles = dragging);
                             }
                           },
+                          onFilesDropped: (files) {
+                            context.read<AttachmentCubit>().addDropItems(
+                              files,
+                              warningThreshold: settings.attachmentWarningBytes,
+                            );
+                            _composerFocus.requestFocus();
+                          },
                           onSend: () => _send(context),
-                          onStop: () =>
-                              context.read<ChatCubit>().cancelGeneration(),
+                          onStop: () {
+                            context.read<ChatCubit>().cancelGeneration();
+                            // Stop only generation on Esc path is separate; stop button
+                            // also cancels an active goal so autopilot does not resume.
+                            if (context.read<GoalCubit>().state.isActive) {
+                              context.read<GoalCubit>().stopGoal(
+                                status: 'Goal stopped by user',
+                              );
+                            }
+                          },
                           onAttachFiles: () =>
                               context.read<AttachmentCubit>().pickFiles(
                                 warningThreshold:
-                                    settings.settings.attachmentWarningBytes,
+                                    settings.attachmentWarningBytes,
                               ),
                           onAttachImages: () =>
                               context.read<AttachmentCubit>().pickImages(
                                 warningThreshold:
-                                    settings.settings.attachmentWarningBytes,
+                                    settings.attachmentWarningBytes,
                               ),
                           onPaste: () => context
                               .read<AttachmentCubit>()
                               .pasteFromClipboard(
                                 warningThreshold:
-                                    settings.settings.attachmentWarningBytes,
+                                    settings.attachmentWarningBytes,
                               ),
                           onRemoveAttachment: (id) =>
                               context.read<AttachmentCubit>().remove(id),
@@ -478,10 +552,8 @@ class _MainShellState extends State<MainShell> {
               },
             );
           },
-        ),
-      ],
-    ),
-      ),
+        );
+      },
     );
   }
 
@@ -495,31 +567,31 @@ class _MainShellState extends State<MainShell> {
                 final grokState = acp.processStatus.state.name;
                 final isStreaming = chat.isStreaming;
 
+                final theme = GrokkerThemeExtension.of(context);
                 return Container(
                   height: 32,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: GrokkerSpacing.s20,
+                    horizontal: GrokkerSpacing.s16,
                   ),
                   decoration: BoxDecoration(
-                    color: GrokkerSurfaces.deepPanel,
-                    border: Border(
-                      top: BorderSide(
-                        color: GrokkerColors.gunmetal.withValues(alpha: 0.8),
-                      ),
-                    ),
+                    color: theme.panel,
+                    border: Border(top: BorderSide(color: theme.panelBorder)),
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.folder_outlined,
                         size: 12,
-                        color: GrokkerColors.slate,
+                        color: GrokkerColors.fog,
                       ),
                       const SizedBox(width: GrokkerSpacing.s8),
                       Expanded(
                         child: Text(
                           _workspaceStatusLabel(ws),
-                          style: GrokkerTypography.mono(size: 10),
+                          style: GrokkerTypography.mono(
+                            size: 11,
+                            color: GrokkerColors.ash,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -528,17 +600,20 @@ class _MainShellState extends State<MainShell> {
                         icon: Icons.terminal,
                         color: grokState == 'running'
                             ? GrokkerColors.mapGreen
-                            : GrokkerColors.slate,
+                            : GrokkerColors.fog,
                       ),
                       const SizedBox(width: GrokkerSpacing.s8),
                       GrokkerMetaChip(
-                        label: isStreaming ? 'Streaming…' : chat.lastActionStatus,
-                        icon: isStreaming ? Icons.sync : Icons.check_circle_outline,
+                        label: isStreaming
+                            ? 'Streaming…'
+                            : chat.lastActionStatus,
+                        icon: isStreaming
+                            ? Icons.sync
+                            : Icons.check_circle_outline,
                         color: isStreaming
-                            ? GrokkerColors.signalBlueBright
-                            : GrokkerColors.slate,
+                            ? GrokkerColors.emberBright
+                            : GrokkerColors.fog,
                       ),
-
                     ],
                   ),
                 );
@@ -559,8 +634,9 @@ class _MainShellState extends State<MainShell> {
       LogicalKeySet(mod, LogicalKeyboardKey.keyO): () =>
           _openWorkspace(context),
       LogicalKeySet(mod, LogicalKeyboardKey.keyN): () => _newSession(context),
+      // Comma used to open settings screen — now toggles the controls rail.
       LogicalKeySet(mod, LogicalKeyboardKey.comma): () =>
-          _openSettings(context),
+          setState(() => _inspectorVisible = !_inspectorVisible),
       LogicalKeySet(mod, LogicalKeyboardKey.keyL): () =>
           _composerFocus.requestFocus(),
       LogicalKeySet(
@@ -601,21 +677,32 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _openWorkspace(BuildContext context) async {
-    await context.read<WorkspaceCubit>().openFolder();
-    final ws = context.read<WorkspaceCubit>().state.workspace;
+    final workspaceCubit = context.read<WorkspaceCubit>();
+    final sessionCubit = context.read<SessionCubit>();
+    await workspaceCubit.openFolder();
+    if (!context.mounted) return;
+    final ws = workspaceCubit.state.workspace;
     if (ws != null) {
       _locator.acpConnectionCubit.updateWorkspace(ws.path);
       _locator.clientRequestHandler.workspacePath = ws.path;
       if (_locator.settingsCubit.state.settings.autoCreateSession) {
-        await _newSession(context);
+        await _newSession(context, sessionCubit: sessionCubit);
       }
     }
   }
 
-  Future<void> _newSession(BuildContext context) async {
-    final ws = context.read<WorkspaceCubit>().state.workspace;
-    final settings = context.read<SettingsCubit>().state.settings;
-    await context.read<SessionCubit>().createSession(
+  Future<void> _newSession(
+    BuildContext context, {
+    SessionCubit? sessionCubit,
+    WorkspaceCubit? workspaceCubit,
+    SettingsCubit? settingsCubit,
+  }) async {
+    final sessions = sessionCubit ?? context.read<SessionCubit>();
+    final workspace = workspaceCubit ?? context.read<WorkspaceCubit>();
+    final settingsState = settingsCubit ?? context.read<SettingsCubit>();
+    final ws = workspace.state.workspace;
+    final settings = settingsState.state.settings;
+    await sessions.createSession(
       workspacePath: ws?.path ?? '',
       model: settings.defaultModel,
       effort: settings.defaultEffort,
@@ -623,34 +710,147 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  Future<void> _send(BuildContext context) async {
+  /// Goal and Multitask cannot run together.
+  void _toggleGoalExclusive(BuildContext context, {required bool isStreaming}) {
+    final goalCubit = context.read<GoalCubit>();
+    final multiCubit = context.read<MultitaskCubit>();
+    if (goalCubit.state.isActive) {
+      goalCubit.stopGoal();
+      return;
+    }
+    if (multiCubit.state.enabled) {
+      multiCubit.disable();
+    }
     final text = _composerController.text.trim();
+    goalCubit.arm(text: text);
+    if (text.isNotEmpty && !isStreaming) {
+      unawaited(_send(context));
+    }
+  }
+
+  void _toggleMultitaskExclusive(BuildContext context) {
+    final goalCubit = context.read<GoalCubit>();
+    final multiCubit = context.read<MultitaskCubit>();
+    if (multiCubit.state.enabled) {
+      multiCubit.disable();
+      return;
+    }
+    if (goalCubit.state.isActive) {
+      goalCubit.stopGoal(status: 'Goal stopped — Multitask enabled');
+    }
+    multiCubit.setEnabled(true);
+  }
+
+  Future<void> _send(BuildContext context) async {
+    final rawText = _composerController.text.trim();
     final attachmentCubit = context.read<AttachmentCubit>();
+    final chatCubit = context.read<ChatCubit>();
+    final sessionCubit = context.read<SessionCubit>();
+    final workspaceCubit = context.read<WorkspaceCubit>();
+    final acpCubit = context.read<AcpConnectionCubit>();
+    final cliCubit = context.read<GrokCliCubit>();
+    final settingsCubit = context.read<SettingsCubit>();
+    final goalCubit = context.read<GoalCubit>();
+    final multiCubit = context.read<MultitaskCubit>();
     final attachments = attachmentCubit.state.attachments;
-    if (text.isEmpty && attachments.isEmpty) return;
 
-    final settings = context.read<SettingsCubit>().state.settings;
+    // Goal-armed with empty prompt box: still allow if goal text is already set
+    // (continuation is automatic; manual send re-asserts the goal).
+    // Image/file-only sends are valid (empty text + attachments).
+    final goalHasText = goalCubit.state.text?.trim().isNotEmpty ?? false;
+    if (rawText.isEmpty && attachments.isEmpty && !goalHasText) return;
+
+    final settings = settingsCubit.state.settings;
     final attachmentsToSend = List<AttachmentItem>.from(attachments);
+    final hasAttachments = attachmentsToSend.isNotEmpty;
 
-    // Clear composer immediately — don't wait for ACP/session/prompt prep.
-    _composerController.clear();
-    attachmentCubit.clearUnpinned();
+    // Frame prompt for Goal *or* Multitask (never both).
+    // Keep a short scrollback label; only the ACP payload is framed.
+    // Do NOT clear composer/attachments until framing succeeds — otherwise
+    // early returns silently drop attached images.
+    var text = rawText;
+    var displayText = rawText;
+    final goalOn = goalCubit.state.isActive && !goalCubit.state.isComplete;
+    if (goalOn && multiCubit.state.enabled) {
+      // Safety: Goal wins if both somehow active.
+      multiCubit.disable();
+    }
+    if (goalOn) {
+      // Capture goal text from this send if not yet set.
+      if (rawText.isNotEmpty) {
+        goalCubit.ensureGoalText(rawText);
+      }
+      if (goalCubit.state.iteration == 0) {
+        var seed = rawText.isNotEmpty
+            ? rawText
+            : (goalCubit.state.text ?? '');
+        // Image/file-only: still start goal with a sensible default seed.
+        if (seed.isEmpty && hasAttachments) {
+          seed = _defaultAttachmentGoalSeed(attachmentsToSend);
+        }
+        if (seed.isEmpty) return;
+        displayText = rawText.isNotEmpty ? rawText : seed;
+        text = goalCubit.frameInitialPrompt(seed);
+        goalCubit.incrementIteration();
+        goalCubit.markRunning();
+      } else if (rawText.isEmpty && goalHasText) {
+        // Manual "continue" while goal is running (optionally with new files).
+        displayText = hasAttachments ? 'Continue goal + attachments' : 'Continue goal';
+        text = goalCubit.buildContinuationPrompt();
+        goalCubit.markRunning();
+      } else if (rawText.isNotEmpty) {
+        // User injected mid-goal guidance.
+        displayText = rawText;
+        text =
+            '''
+Additional guidance while pursuing the GOAL (${goalCubit.state.text}):
 
-    final acpState = context.read<AcpConnectionCubit>().state;
-    if (!acpState.initialized) {
-      final cli = context.read<GrokCliCubit>().state;
-      if (cli.found && cli.command != null) {
-        await context.read<AcpConnectionCubit>().start(
-          command: cli.command!,
-          args: cli.args,
-        );
+$rawText
+
+Remember: when the goal is fully done, end with:
+✅ Goal achieved
+'''
+                .trim();
+        goalCubit.markRunning();
+      } else if (!hasAttachments) {
+        return;
+      }
+    } else if (multiCubit.state.enabled) {
+      // Multitask framing; empty body is fine when files are attached.
+      if (text.trim().isEmpty && hasAttachments) {
+        text = _defaultAttachmentPrompt(attachmentsToSend);
+      }
+      text = multiCubit.framePrompt(text);
+      if (rawText.isEmpty) {
+        displayText = hasAttachments ? '' : 'Multitask';
       }
     }
 
-    var session = context.read<SessionCubit>().state.activeSession;
+    // Allow empty text when attachments are present — ChatCubit / envelope
+    // builder inject "Please analyze the attached image(s)."
+    if (text.trim().isEmpty && !hasAttachments) return;
+
+    // Clear composer only after we know the send will proceed.
+    _composerController.clear();
+    attachmentCubit.clearUnpinned();
+
+    final acpState = acpCubit.state;
+    if (!acpState.initialized) {
+      final cli = cliCubit.state;
+      if (cli.found && cli.command != null) {
+        await acpCubit.start(command: cli.command!, args: cli.args);
+      }
+    }
+
+    var session = sessionCubit.state.activeSession;
     if (session == null) {
-      await _newSession(context);
-      session = context.read<SessionCubit>().state.activeSession;
+      await _newSession(
+        context,
+        sessionCubit: sessionCubit,
+        workspaceCubit: workspaceCubit,
+        settingsCubit: settingsCubit,
+      );
+      session = sessionCubit.state.activeSession;
       if (session == null) return;
     }
 
@@ -665,11 +865,12 @@ class _MainShellState extends State<MainShell> {
     final supportsImages = caps?['image'] == true;
     final supportsEmbedded = caps?['embeddedContext'] == true;
 
-    final wsState = context.read<WorkspaceCubit>().state;
+    final wsState = workspaceCubit.state;
 
-    await context.read<ChatCubit>().sendMessage(
+    await chatCubit.sendMessage(
       session: session,
       userText: text,
+      displayText: displayText,
       workspace: wsState.workspace,
       workspaceMemory: wsState.memory,
       attachments: attachmentsToSend,
@@ -680,29 +881,6 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  void _openSettings(BuildContext context) {
-    final settings = context.read<SettingsCubit>().state.settings;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SettingsScreen(
-          settings: settings,
-          onSave: (s) async {
-            await context.read<SettingsCubit>().update(s);
-            _locator.clientRequestHandler.approvalMode = s.approvalMode;
-            if (context.mounted) Navigator.pop(context);
-          },
-          onReset: () async {
-            await context.read<SettingsCubit>().reset();
-            if (context.mounted) Navigator.pop(context);
-          },
-          onClearCache: () async {
-            await context.read<SessionCubit>().load();
-          },
-        ),
-      ),
-    );
-  }
-
   Future<void> _restartGrok(BuildContext context) async {
     final cli = context.read<GrokCliCubit>().state;
     await context.read<AcpConnectionCubit>().restart(
@@ -710,114 +888,23 @@ class _MainShellState extends State<MainShell> {
       args: cli.args,
     );
   }
-}
 
-class _EmptyWorkspaceState extends StatelessWidget {
-  const _EmptyWorkspaceState({required this.onOpenWorkspace});
-
-  final VoidCallback onOpenWorkspace;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(GrokkerSpacing.s48),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  gradient: GrokkerGradients.signalGlow,
-                  borderRadius: BorderRadius.circular(GrokkerRadius.panel),
-                  boxShadow: GrokkerShadows.glow(GrokkerColors.signalBlue, blur: 24),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 36,
-                  color: GrokkerColors.white,
-                ),
-              ),
-              const SizedBox(height: GrokkerSpacing.s32),
-              Text(
-                'Build with Grok',
-                style: GrokkerTypography.display(),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: GrokkerSpacing.s16),
-              Text(
-                'Open a workspace and create a session to start building with Grok.',
-                style: GrokkerTypography.subheading(color: GrokkerColors.ash),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: GrokkerSpacing.s32),
-              GrokkerPrimaryButton(
-                label: 'Open folder',
-                icon: Icons.folder_open_rounded,
-                onPressed: onOpenWorkspace,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  static String _defaultAttachmentPrompt(List<AttachmentItem> attachments) {
+    final images =
+        attachments.where((a) => a.type == AttachmentType.image).length;
+    if (images == 1) return 'Please analyze the attached image.';
+    if (images > 1) return 'Please analyze the attached images.';
+    if (attachments.length == 1) {
+      return 'Please review the attached file: ${attachments.first.fileName}';
+    }
+    return 'Please review the attached files.';
   }
-}
 
-class _EmptyChatState extends StatelessWidget {
-  const _EmptyChatState({required this.sessionTitle});
-
-  final String sessionTitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(GrokkerSpacing.s48),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const GrokkerAvatar(
-              icon: Icons.chat_bubble_outline_rounded,
-              color: GrokkerColors.signalBlue,
-              size: 56,
-            ),
-            const SizedBox(height: GrokkerSpacing.s24),
-            Text(
-              sessionTitle,
-              style: GrokkerTypography.headingSm(),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: GrokkerSpacing.s8),
-            Text(
-              'Send a message to begin.',
-              style: GrokkerTypography.bodySm(color: GrokkerColors.slate),
-            ),
-            const SizedBox(height: GrokkerSpacing.s24),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: GrokkerSpacing.s8,
-              children: const [
-                GrokkerMetaChip(
-                  label: 'Ask questions',
-                  icon: Icons.help_outline,
-                ),
-                GrokkerMetaChip(
-                  label: 'Write code',
-                  icon: Icons.code,
-                ),
-                GrokkerMetaChip(
-                  label: 'Attach files',
-                  icon: Icons.attach_file,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  static String _defaultAttachmentGoalSeed(List<AttachmentItem> attachments) {
+    final images =
+        attachments.where((a) => a.type == AttachmentType.image).length;
+    if (images == 1) return 'Analyze the attached image thoroughly.';
+    if (images > 1) return 'Analyze the attached images thoroughly.';
+    return 'Review and analyze the attached files.';
   }
 }

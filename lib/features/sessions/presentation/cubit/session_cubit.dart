@@ -85,7 +85,7 @@ class SessionCubit extends Cubit<SessionState> {
 
   Future<void> createSession({
     required String workspacePath,
-    GrokModel model = GrokModel.grokBuild01,
+    GrokModel model = GrokModel.defaultModel,
     ThinkingEffort effort = ThinkingEffort.auto,
     String? processCommand,
   }) async {
@@ -111,8 +111,9 @@ class SessionCubit extends Cubit<SessionState> {
 
   Future<void> renameSession(String id, String title) async {
     final updated = state.sessions.map((s) {
-      if (s.id == id)
+      if (s.id == id) {
         return s.copyWith(title: title, updatedAt: DateTime.now());
+      }
       return s;
     }).toList();
     await _repository.saveAll(updated);
@@ -134,12 +135,25 @@ class SessionCubit extends Cubit<SessionState> {
     );
   }
 
-  Future<void> updateSession(AppSession session) async {
+  /// In-memory only — use during streaming tokens so we never hit disk per chunk.
+  void updateSessionInMemory(AppSession session) {
     final updated = state.sessions
         .map((s) => s.id == session.id ? session : s)
         .toList();
     emit(state.copyWith(sessions: updated));
-    await _repository.saveAll(updated);
+  }
+
+  /// Persist sessions to disk (call on finalize, cancel, title, model changes).
+  Future<void> persistSessions() async {
+    await _repository.saveAll(state.sessions);
+  }
+
+  /// Update one session in memory and optionally persist.
+  Future<void> updateSession(AppSession session, {bool persist = true}) async {
+    updateSessionInMemory(session);
+    if (persist) {
+      await persistSessions();
+    }
   }
 
   void setSearchQuery(String query) {

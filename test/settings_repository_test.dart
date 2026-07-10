@@ -18,7 +18,7 @@ void main() {
 
     test('loads defaults when empty', () async {
       final settings = await repository.load();
-      expect(settings.defaultModel, GrokModel.grokBuild01);
+      expect(settings.defaultModel.id, GrokModel.defaultModel.id);
       expect(settings.approvalMode, ApprovalMode.autoApproveReads);
     });
 

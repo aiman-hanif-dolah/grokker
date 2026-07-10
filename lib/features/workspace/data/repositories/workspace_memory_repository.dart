@@ -37,7 +37,8 @@ class WorkspaceMemoryRepository {
     );
     if (!await file.exists()) return null;
     try {
-      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      final json =
+          jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       return WorkspaceMemory.fromJson(json);
     } catch (_) {
       return null;
@@ -77,7 +78,8 @@ class WorkspaceMemoryRepository {
     final file = await _lastWorkspaceFile();
     if (!await file.exists()) return null;
     try {
-      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      final json =
+          jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       return json['path'] as String?;
     } catch (_) {
       return null;

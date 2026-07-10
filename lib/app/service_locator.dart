@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../features/acp/data/services/acp_client.dart';
 import '../features/acp/data/services/acp_client_request_handler.dart';
 import '../features/acp/data/services/grok_cli_locator_service.dart';
@@ -15,6 +17,9 @@ import '../features/diagnostics/presentation/cubit/diagnostics_cubit.dart';
 import '../features/diff_viewer/data/services/diff_service.dart';
 import '../features/diff_viewer/presentation/cubit/diff_cubit.dart';
 import '../features/goal/presentation/cubit/goal_cubit.dart';
+import '../features/models/data/services/grok_models_service.dart';
+import '../features/models/presentation/cubit/models_cubit.dart';
+import '../features/multitask/presentation/cubit/multitask_cubit.dart';
 import '../features/sessions/data/repositories/session_repository.dart';
 import '../features/sessions/presentation/cubit/session_cubit.dart';
 import '../features/settings/data/repositories/settings_repository.dart';
@@ -23,6 +28,7 @@ import '../features/workspace/data/repositories/workspace_memory_repository.dart
 import '../features/workspace/data/services/workspace_memory_service.dart';
 import '../features/workspace/data/services/workspace_service.dart';
 import '../features/workspace/presentation/cubit/workspace_cubit.dart';
+import '../shared/models/grok_model.dart';
 import 'cubit/app_startup_cubit.dart';
 
 class ServiceLocator {
@@ -45,6 +51,7 @@ class ServiceLocator {
   late final AttachmentPromptBuilder attachmentPromptBuilder;
   late final SessionTitleService sessionTitleService;
   late final GeneratedImageService generatedImageService;
+  late final GrokModelsService grokModelsService;
 
   late final SettingsCubit settingsCubit;
   late final GrokCliCubit grokCliCubit;
@@ -56,6 +63,8 @@ class ServiceLocator {
   late final DiagnosticsCubit diagnosticsCubit;
   late final DiffCubit diffCubit;
   late final GoalCubit goalCubit;
+  late final MultitaskCubit multitaskCubit;
+  late final ModelsCubit modelsCubit;
   late final AppStartupCubit appStartupCubit;
 
   Future<void> init() async {
@@ -76,6 +85,7 @@ class ServiceLocator {
     attachmentPromptBuilder = AttachmentPromptBuilder();
     sessionTitleService = SessionTitleService();
     generatedImageService = GeneratedImageService();
+    grokModelsService = GrokModelsService();
 
     settingsCubit = SettingsCubit(settingsRepository);
     grokCliCubit = GrokCliCubit(grokCliLocator);
@@ -101,13 +111,36 @@ class ServiceLocator {
     );
     diffCubit = DiffCubit(diffService);
     goalCubit = GoalCubit();
+    multitaskCubit = MultitaskCubit();
+    modelsCubit = ModelsCubit(grokModelsService);
     appStartupCubit = AppStartupCubit();
 
-    chatCubit.onSessionUpdated = (session) {
-      sessionCubit.updateSession(session);
+    chatCubit.onSessionUpdated = (session, {bool persist = true}) {
+      if (persist) {
+        unawaited(sessionCubit.updateSession(session, persist: true));
+      } else {
+        sessionCubit.updateSessionInMemory(session);
+      }
     };
 
+    // Load models first so settings/session defaults resolve to latest ids.
+    await modelsCubit.load(refreshCli: false);
     await settingsCubit.load();
+    // If settings still point at a missing/legacy model, pin to CLI default.
+    final settings = settingsCubit.state.settings;
+    final resolvedDefault = GrokModelCatalog.instance.defaultModel;
+    final current =
+        GrokModelCatalog.instance.find(settings.defaultModel.id) ??
+        settings.defaultModel;
+    if (current.id != settings.defaultModel.id ||
+        current.displayName != settings.defaultModel.displayName) {
+      await settingsCubit.update(settings.copyWith(defaultModel: current));
+    } else if (GrokModelCatalog.instance.find(settings.defaultModel.id) ==
+        null) {
+      await settingsCubit.update(
+        settings.copyWith(defaultModel: resolvedDefault),
+      );
+    }
     await sessionCubit.load();
   }
 

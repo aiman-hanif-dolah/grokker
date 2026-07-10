@@ -30,8 +30,9 @@ class ChatMessageTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: GrokkerSpacing.s8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!isUser) ...[
             _RoleAvatar(message: message),
@@ -71,10 +72,22 @@ class _RoleAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color) = switch (message.role) {
-      ChatMessageRole.assistant => (Icons.auto_awesome_rounded, GrokkerColors.signalBlue),
-      ChatMessageRole.tool => (Icons.build_circle_outlined, GrokkerColors.warningAmber),
-      ChatMessageRole.error => (Icons.error_outline_rounded, GrokkerColors.errorRed),
-      ChatMessageRole.system => (Icons.info_outline_rounded, GrokkerColors.slate),
+      ChatMessageRole.assistant => (
+        Icons.auto_awesome_rounded,
+        GrokkerColors.signalBlue,
+      ),
+      ChatMessageRole.tool => (
+        Icons.build_circle_outlined,
+        GrokkerColors.warningAmber,
+      ),
+      ChatMessageRole.error => (
+        Icons.error_outline_rounded,
+        GrokkerColors.errorRed,
+      ),
+      ChatMessageRole.system => (
+        Icons.info_outline_rounded,
+        GrokkerColors.slate,
+      ),
       ChatMessageRole.user => (Icons.person_rounded, GrokkerColors.signalBlue),
     };
 
@@ -108,22 +121,22 @@ class _MessageBubble extends StatelessWidget {
     final accentColor = isUser
         ? GrokkerColors.signalBlue
         : isError
-            ? GrokkerColors.errorRed
-            : isTool
-                ? GrokkerColors.warningAmber
-                : GrokkerColors.pewter;
+        ? GrokkerColors.errorRed
+        : isTool
+        ? GrokkerColors.warningAmber
+        : GrokkerColors.pewter;
 
     final bg = isUser
         ? GrokkerColors.signalBlue.withValues(alpha: 0.08)
         : isError
-            ? GrokkerColors.errorRedMuted.withValues(alpha: 0.3)
-            : GrokkerSurfaces.deepPanel;
+        ? GrokkerColors.errorRedMuted.withValues(alpha: 0.3)
+        : GrokkerSurfaces.deepPanel;
 
     final borderColor = isUser
         ? GrokkerColors.signalBlue.withValues(alpha: 0.25)
         : isError
-            ? GrokkerColors.errorRed.withValues(alpha: 0.35)
-            : GrokkerColors.gunmetal;
+        ? GrokkerColors.errorRed.withValues(alpha: 0.35)
+        : GrokkerColors.gunmetal;
 
     return Container(
       constraints: const BoxConstraints(maxWidth: GrokkerSpacing.chatMaxWidth),
@@ -132,8 +145,12 @@ class _MessageBubble extends StatelessWidget {
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(GrokkerRadius.card),
           topRight: const Radius.circular(GrokkerRadius.card),
-          bottomLeft: Radius.circular(isUser ? GrokkerRadius.card : GrokkerRadius.badge),
-          bottomRight: Radius.circular(isUser ? GrokkerRadius.badge : GrokkerRadius.card),
+          bottomLeft: Radius.circular(
+            isUser ? GrokkerRadius.card : GrokkerRadius.badge,
+          ),
+          bottomRight: Radius.circular(
+            isUser ? GrokkerRadius.badge : GrokkerRadius.card,
+          ),
         ),
         border: Border.all(color: borderColor),
         boxShadow: isUser
@@ -144,8 +161,12 @@ class _MessageBubble extends StatelessWidget {
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(GrokkerRadius.card),
           topRight: const Radius.circular(GrokkerRadius.card),
-          bottomLeft: Radius.circular(isUser ? GrokkerRadius.card : GrokkerRadius.badge),
-          bottomRight: Radius.circular(isUser ? GrokkerRadius.badge : GrokkerRadius.card),
+          bottomLeft: Radius.circular(
+            isUser ? GrokkerRadius.card : GrokkerRadius.badge,
+          ),
+          bottomRight: Radius.circular(
+            isUser ? GrokkerRadius.badge : GrokkerRadius.card,
+          ),
         ),
         child: IntrinsicHeight(
           child: Row(
@@ -157,10 +178,7 @@ class _MessageBubble extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      accentColor,
-                      accentColor.withValues(alpha: 0.2),
-                    ],
+                    colors: [accentColor, accentColor.withValues(alpha: 0.2)],
                   ),
                 ),
               ),
@@ -174,7 +192,9 @@ class _MessageBubble extends StatelessWidget {
                         children: [
                           if (isTool)
                             const Padding(
-                              padding: EdgeInsets.only(right: GrokkerSpacing.s8),
+                              padding: EdgeInsets.only(
+                                right: GrokkerSpacing.s8,
+                              ),
                               child: GrokkerBadge(
                                 label: 'Tool',
                                 variant: GrokkerBadgeVariant.neutral,
@@ -183,7 +203,9 @@ class _MessageBubble extends StatelessWidget {
                             ),
                           if (isError)
                             const Padding(
-                              padding: EdgeInsets.only(right: GrokkerSpacing.s8),
+                              padding: EdgeInsets.only(
+                                right: GrokkerSpacing.s8,
+                              ),
                               child: GrokkerBadge(
                                 label: 'Error',
                                 variant: GrokkerBadgeVariant.error,
@@ -215,7 +237,9 @@ class _MessageBubble extends StatelessWidget {
                       if (hasImages) ...[
                         ...message.images.map(
                           (image) => Padding(
-                            padding: const EdgeInsets.only(bottom: GrokkerSpacing.s8),
+                            padding: const EdgeInsets.only(
+                              bottom: GrokkerSpacing.s8,
+                            ),
                             child: _ChatImagePreview(image: image),
                           ),
                         ),
@@ -225,7 +249,9 @@ class _MessageBubble extends StatelessWidget {
                           SelectableText(
                             message.content,
                             style: GrokkerTypography.bodySm(
-                              color: isError ? GrokkerColors.ash : theme.bodyText,
+                              color: isError
+                                  ? GrokkerColors.ash
+                                  : theme.bodyText,
                             ),
                           )
                         else
@@ -234,27 +260,40 @@ class _MessageBubble extends StatelessWidget {
                             selectable: true,
                             styleSheet: MarkdownStyleSheet(
                               p: GrokkerTypography.body(color: theme.bodyText),
-                              h1: GrokkerTypography.headingSm(color: theme.headingText),
-                              h2: GrokkerTypography.label(color: theme.headingText),
-                              h3: GrokkerTypography.label(color: theme.headingText),
+                              h1: GrokkerTypography.headingSm(
+                                color: theme.headingText,
+                              ),
+                              h2: GrokkerTypography.label(
+                                color: theme.headingText,
+                              ),
+                              h3: GrokkerTypography.label(
+                                color: theme.headingText,
+                              ),
                               code: GrokkerTypography.mono(size: 12),
                               codeblockDecoration: BoxDecoration(
                                 color: GrokkerSurfaces.voidFloor,
-                                borderRadius: BorderRadius.circular(GrokkerRadius.input),
-                                border: Border.all(color: GrokkerColors.gunmetal),
+                                borderRadius: BorderRadius.circular(
+                                  GrokkerRadius.input,
+                                ),
+                                border: Border.all(
+                                  color: GrokkerColors.gunmetal,
+                                ),
                               ),
                               blockquoteDecoration: BoxDecoration(
                                 border: Border(
                                   left: BorderSide(
-                                    color: GrokkerColors.signalBlue.withValues(alpha: 0.5),
+                                    color: GrokkerColors.signalBlue.withValues(
+                                      alpha: 0.5,
+                                    ),
                                     width: 3,
                                   ),
                                 ),
                               ),
-                              blockquotePadding: const EdgeInsets.only(left: GrokkerSpacing.s12),
+                              blockquotePadding: const EdgeInsets.only(
+                                left: GrokkerSpacing.s12,
+                              ),
                             ),
-                          )
-
+                          ),
                     ],
                   ),
                 ),

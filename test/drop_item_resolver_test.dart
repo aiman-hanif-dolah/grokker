@@ -14,9 +14,7 @@ void main() {
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('grokker_drop_test');
-    service = AttachmentService(
-      supportDirectoryProvider: () async => tempDir,
-    );
+    service = AttachmentService(supportDirectoryProvider: () async => tempDir);
     resolver = DropItemResolver(service);
   });
 
@@ -30,9 +28,7 @@ void main() {
     final file = File('${tempDir.path}/notes.md');
     await file.writeAsString('# hello');
 
-    final attachments = await resolver.resolve([
-      DropItemFile(file.path),
-    ]);
+    final attachments = await resolver.resolve([DropItemFile(file.path)]);
 
     expect(attachments, hasLength(1));
     expect(attachments.first.fileName, 'notes.md');

@@ -37,10 +37,7 @@ class AttachmentState extends Equatable {
 }
 
 class AttachmentPasteResult {
-  const AttachmentPasteResult({
-    this.attached = false,
-    this.insertedText,
-  });
+  const AttachmentPasteResult({this.attached = false, this.insertedText});
 
   final bool attached;
   final String? insertedText;
@@ -59,57 +56,71 @@ class AttachmentCubit extends Cubit<AttachmentState> {
   final ClipboardAttachmentReader _clipboardReader;
   final DropItemResolver _dropItemResolver;
 
-  static const _pickerExtensions = [
-    'png',
-    'jpg',
-    'jpeg',
-    'webp',
-    'gif',
-    'heic',
-    'heif',
-    'tiff',
-    'tif',
-    'bmp',
-    'ico',
-    'pdf',
-    'txt',
-    'md',
-    'json',
-    'yaml',
-    'yml',
-    'toml',
-    'dart',
-    'ts',
-    'tsx',
-    'js',
-    'py',
-    'rs',
-    'go',
-  ];
-
   Future<void> pickFiles({int warningThreshold = 5242880}) async {
+    // Allow any file type — PDFs, Office docs, source, etc.
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
-      type: FileType.custom,
-      allowedExtensions: _pickerExtensions,
+      type: FileType.any,
     );
     if (result == null) return;
-    await addPaths(
-      result.paths.whereType<String>().toList(),
-      warningThreshold: warningThreshold,
-    );
+
+    final paths = <String>[];
+    for (final f in result.files) {
+      final path = f.path;
+      if (path != null && path.isNotEmpty) {
+        paths.add(path);
+      }
+    }
+    if (paths.isEmpty) {
+      emit(
+        state.copyWith(
+          statusMessage:
+              'Could not read selected file path. Try drag-and-drop instead.',
+        ),
+      );
+      return;
+    }
+    await addPaths(paths, warningThreshold: warningThreshold);
   }
 
   Future<void> pickImages({int warningThreshold = 5242880}) async {
+    // Prefer custom image extensions on desktop — FileType.image can return
+    // null paths on some Windows file_picker builds.
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
-      type: FileType.image,
+      type: FileType.custom,
+      allowedExtensions: const [
+        'png',
+        'jpg',
+        'jpeg',
+        'webp',
+        'gif',
+        'bmp',
+        'heic',
+        'heif',
+        'tif',
+        'tiff',
+      ],
     );
     if (result == null) return;
-    await addPaths(
-      result.paths.whereType<String>().toList(),
-      warningThreshold: warningThreshold,
-    );
+
+    final paths = <String>[];
+    for (final f in result.files) {
+      final path = f.path;
+      if (path != null && path.isNotEmpty) {
+        paths.add(path);
+      }
+    }
+    if (paths.isEmpty) {
+      emit(
+        state.copyWith(
+          statusMessage:
+              'Could not read selected image path. Try drag-and-drop instead.',
+        ),
+      );
+      return;
+    }
+    await addPaths(paths, warningThreshold: warningThreshold);
   }
 
   Future<AttachmentPasteResult> pasteFromClipboard({
@@ -123,10 +134,13 @@ class AttachmentCubit extends Cubit<AttachmentState> {
     if (payload.hasAttachments) {
       emit(state.copyWith(isLoading: true, clearStatus: true));
       final updated = [...state.attachments];
-      final currentImages = state.attachments.where((a) => a.type == AttachmentType.image).length;
+      final currentImages = state.attachments
+          .where((a) => a.type == AttachmentType.image)
+          .length;
       var addedImages = 0;
 
-      if (payload.image != null && currentImages + addedImages < maxImageAttachments) {
+      if (payload.image != null &&
+          currentImages + addedImages < maxImageAttachments) {
         final image = payload.image!;
         final item = await _service.createFromBytes(
           bytes: image.bytes,
@@ -147,7 +161,8 @@ class AttachmentCubit extends Cubit<AttachmentState> {
             warningThreshold: warningThreshold,
           );
           if (item != null) {
-            if (item.type == AttachmentType.image && currentImages + addedImages >= maxImageAttachments) {
+            if (item.type == AttachmentType.image &&
+                currentImages + addedImages >= maxImageAttachments) {
               continue;
             }
             updated.add(item);
@@ -196,8 +211,12 @@ class AttachmentCubit extends Cubit<AttachmentState> {
       return;
     }
 
-    final currentImages = state.attachments.where((a) => a.type == AttachmentType.image).length;
-    final newImages = resolved.where((a) => a.type == AttachmentType.image).length;
+    final currentImages = state.attachments
+        .where((a) => a.type == AttachmentType.image)
+        .length;
+    final newImages = resolved
+        .where((a) => a.type == AttachmentType.image)
+        .length;
     if (currentImages + newImages > maxImageAttachments) {
       emit(
         state.copyWith(
@@ -210,10 +229,7 @@ class AttachmentCubit extends Cubit<AttachmentState> {
 
     final updated = [...state.attachments, ...resolved];
     emit(
-      AttachmentState(
-        attachments: updated,
-        statusMessage: _statusFor(updated),
-      ),
+      AttachmentState(attachments: updated, statusMessage: _statusFor(updated)),
     );
   }
 
@@ -225,14 +241,17 @@ class AttachmentCubit extends Cubit<AttachmentState> {
     emit(state.copyWith(isLoading: true, clearStatus: true));
     final updated = [...state.attachments];
     var added = 0;
-    final currentImages = state.attachments.where((a) => a.type == AttachmentType.image).length;
+    final currentImages = state.attachments
+        .where((a) => a.type == AttachmentType.image)
+        .length;
     for (final path in paths) {
       final item = await _service.validateAndCreate(
         path,
         warningThreshold: warningThreshold,
       );
       if (item != null) {
-        if (item.type == AttachmentType.image && currentImages + added >= maxImageAttachments) {
+        if (item.type == AttachmentType.image &&
+            currentImages + added >= maxImageAttachments) {
           continue;
         }
         updated.add(item);
@@ -251,10 +270,16 @@ class AttachmentCubit extends Cubit<AttachmentState> {
 
   String? _statusFor(List<AttachmentItem> attachments) {
     if (attachments.any((a) => a.type == AttachmentType.pdf)) {
-      return 'Attached PDF passed as local file reference.';
+      return 'PDF attached — content embedded for Grok to read.';
+    }
+    if (attachments.any((a) => a.type == AttachmentType.binary)) {
+      return 'File attached — binary content embedded when size allows.';
     }
     if (attachments.any((a) => a.type == AttachmentType.image)) {
       return 'Image attached — Grok can inspect it with your prompt.';
+    }
+    if (attachments.isNotEmpty) {
+      return '${attachments.length} file(s) attached.';
     }
     return null;
   }

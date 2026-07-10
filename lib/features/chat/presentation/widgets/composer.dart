@@ -62,8 +62,7 @@ class _ComposerState extends State<Composer> {
       widget.settings.composerEnterBehavior == ComposerEnterBehavior.send;
 
   bool get _canSend =>
-      !widget.isStreaming &&
-      (_hasText || widget.attachments.isNotEmpty);
+      !widget.isStreaming && (_hasText || widget.attachments.isNotEmpty);
 
   @override
   void initState() {
@@ -110,7 +109,9 @@ class _ComposerState extends State<Composer> {
   void _insertText(String text) {
     final controller = widget.controller;
     final selection = controller.selection;
-    final start = selection.start >= 0 ? selection.start : controller.text.length;
+    final start = selection.start >= 0
+        ? selection.start
+        : controller.text.length;
     final end = selection.end >= 0 ? selection.end : controller.text.length;
     final newText = controller.text.replaceRange(start, end, text);
     controller.value = controller.value.copyWith(
@@ -122,7 +123,8 @@ class _ComposerState extends State<Composer> {
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-    final isPaste = event.logicalKey == LogicalKeyboardKey.keyV &&
+    final isPaste =
+        event.logicalKey == LogicalKeyboardKey.keyV &&
         (HardwareKeyboard.instance.isMetaPressed ||
             HardwareKeyboard.instance.isControlPressed);
     if (isPaste) {
@@ -156,8 +158,8 @@ class _ComposerState extends State<Composer> {
     final borderColor = _focused
         ? GrokkerColors.signalBlue
         : dragging
-            ? GrokkerColors.signalBlue.withValues(alpha: 0.6)
-            : GrokkerColors.pewter.withValues(alpha: 0.5);
+        ? GrokkerColors.signalBlue.withValues(alpha: 0.6)
+        : GrokkerColors.pewter.withValues(alpha: 0.5);
 
     return Container(
       decoration: BoxDecoration(
@@ -178,7 +180,9 @@ class _ComposerState extends State<Composer> {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: GrokkerSpacing.chatMaxWidth + 48),
+          constraints: const BoxConstraints(
+            maxWidth: GrokkerSpacing.chatMaxWidth + 48,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -222,7 +226,9 @@ class _ComposerState extends State<Composer> {
                   children: [
                     if (dragging)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: GrokkerSpacing.s8),
+                        padding: const EdgeInsets.only(
+                          bottom: GrokkerSpacing.s8,
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -396,7 +402,11 @@ class _ShortcutChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GrokkerMetaChip(label: label, icon: icon, color: GrokkerColors.slate);
+    return GrokkerMetaChip(
+      label: label,
+      icon: icon,
+      color: GrokkerColors.slate,
+    );
   }
 }
 
@@ -522,11 +532,13 @@ class _ComposerActionButton extends StatelessWidget {
       message: tooltip,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: isActive ? LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [activeColor, activeColor.withValues(alpha: 0.7)],
-          ) : null,
+          gradient: isActive
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [activeColor, activeColor.withValues(alpha: 0.7)],
+                )
+              : null,
           color: isActive ? null : GrokkerColors.steel,
           shape: BoxShape.circle,
           boxShadow: isActive

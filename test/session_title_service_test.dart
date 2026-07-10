@@ -12,9 +12,18 @@ void main() {
     });
 
     test('parses clean title from Grok response', () {
-      expect(service.parseTitle('Flutter Login Screen'), 'Flutter Login Screen');
-      expect(service.parseTitle('"Dark Theme Redesign"'), 'Dark Theme Redesign');
-      expect(service.parseTitle('Title: API Rate Limiting'), 'API Rate Limiting');
+      expect(
+        service.parseTitle('Flutter Login Screen'),
+        'Flutter Login Screen',
+      );
+      expect(
+        service.parseTitle('"Dark Theme Redesign"'),
+        'Dark Theme Redesign',
+      );
+      expect(
+        service.parseTitle('Title: API Rate Limiting'),
+        'API Rate Limiting',
+      );
     });
 
     test('buildTitlePrompt includes user message', () {

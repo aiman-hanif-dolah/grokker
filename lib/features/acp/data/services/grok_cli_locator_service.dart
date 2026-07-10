@@ -75,16 +75,33 @@ class GrokCliLocatorService {
   /// Official xAI Grok Build CLI install location.
   static String? officialGrokPath() {
     final home = resolveHomeDirectory();
-    return home != null ? '$home/.grok/bin/grok' : null;
+    if (home == null) return null;
+    final sep = Platform.isWindows ? '\\' : '/';
+    // On Windows the CLI is typically grok.cmd / grok.exe; keep path style native.
+    return '$home$sep.grok${sep}bin${sep}grok';
   }
 
   /// Resolves the real user home directory.
   ///
   /// macOS sandboxed .app bundles set HOME to
   /// ~/Library/Containers/<bundle-id>/Data — not the user's actual home.
+  /// On Windows, prefer USERPROFILE (HOME is often unset).
   static String? resolveHomeDirectory() {
     final user = _resolveUsername();
     final home = Platform.environment['HOME'];
+    final userProfile = Platform.environment['USERPROFILE'];
+
+    if (Platform.isWindows) {
+      if (userProfile != null && userProfile.isNotEmpty) {
+        return userProfile;
+      }
+      if (home != null && home.isNotEmpty) return home;
+      if (user != null && user.isNotEmpty) {
+        // Best-effort fallback when env is stripped (e.g. some test runners).
+        return 'C:\\Users\\$user';
+      }
+      return null;
+    }
 
     if (home != null && home.isNotEmpty && !_isSandboxContainerHome(home)) {
       return home;
@@ -111,8 +128,15 @@ class GrokCliLocatorService {
   /// Candidate paths to probe, in priority order.
   static List<String> knownInstallPaths() {
     final paths = <String>{};
-    final home = resolveHomeDirectory();
-    if (home != null) paths.add('$home/.grok/bin/grok');
+    final official = officialGrokPath();
+    if (official != null) {
+      paths.add(official);
+      if (Platform.isWindows) {
+        // Windows npm global / official installers often ship .cmd wrappers.
+        paths.add('$official.cmd');
+        paths.add('$official.exe');
+      }
+    }
 
     // Always probe the real macOS user home via USER, even when HOME is sandboxed.
     final user = _resolveUsername();
@@ -282,27 +306,34 @@ class GrokCliLocatorService {
 
   String _shellQuote(String value) => "'${value.replaceAll("'", "'\\''")}'";
 
-  /// Ensures spawned processes can find grok when launched from a macOS .app.
+  /// Ensures spawned processes can find grok when launched from a desktop app.
   static Map<String, String> augmentedEnvironment() {
     final env = Map<String, String>.from(Platform.environment);
     final home = resolveHomeDirectory();
+    final pathSep = Platform.isWindows ? ';' : ':';
+    final dirSep = Platform.isWindows ? '\\' : '/';
     final extra = <String>[
-      if (home != null) '$home/.grok/bin',
-      if (home != null) '$home/.local/bin',
-      '/usr/local/bin',
-      // homebrew last — often has the wrong "grok" package
-      '/opt/homebrew/bin',
+      if (home != null) '$home$dirSep.grok${dirSep}bin',
+      if (home != null) '$home$dirSep.local${dirSep}bin',
+      if (!Platform.isWindows) ...[
+        '/usr/local/bin',
+        // homebrew last — often has the wrong "grok" package
+        '/opt/homebrew/bin',
+      ],
     ];
 
     final current = env['PATH'] ?? '';
-    final parts = current.split(':').where((p) => p.isNotEmpty).toList();
+    final parts = current.split(pathSep).where((p) => p.isNotEmpty).toList();
     for (final segment in extra.reversed) {
       if (!parts.contains(segment)) {
         parts.insert(0, segment);
       }
     }
-    if (home != null) env['HOME'] = home;
-    env['PATH'] = parts.join(':');
+    if (home != null) {
+      env['HOME'] = home;
+      if (Platform.isWindows) env['USERPROFILE'] = home;
+    }
+    env['PATH'] = parts.join(pathSep);
     return env;
   }
 }

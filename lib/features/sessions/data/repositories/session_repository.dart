@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../../../../shared/models/grok_model.dart';
 import '../../../../shared/models/thinking_effort.dart';
 import '../../domain/models/app_session.dart';
 

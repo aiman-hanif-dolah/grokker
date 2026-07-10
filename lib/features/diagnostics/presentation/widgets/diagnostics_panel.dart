@@ -37,7 +37,10 @@ class DiagnosticsPanel extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Text('Diagnostics', style: GrokkerTypography.label(color: GrokkerColors.white)),
+                Text(
+                  'Diagnostics',
+                  style: GrokkerTypography.label(color: GrokkerColors.white),
+                ),
                 const Spacer(),
                 GrokkerGhostButton(
                   label: 'Copy',
@@ -51,10 +54,7 @@ class DiagnosticsPanel extends StatelessWidget {
                   icon: Icons.restart_alt,
                   onPressed: onRestart,
                 ),
-                GrokkerIconFrameButton(
-                  icon: Icons.close,
-                  onPressed: onClose,
-                ),
+                GrokkerIconFrameButton(icon: Icons.close, onPressed: onClose),
               ],
             ),
           ),

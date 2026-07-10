@@ -78,9 +78,8 @@ class ChatMessage extends Equatable {
           ? const []
           : rawImages
                 .map(
-                  (e) => ChatImageAttachment.fromJson(
-                    e as Map<String, dynamic>,
-                  ),
+                  (e) =>
+                      ChatImageAttachment.fromJson(e as Map<String, dynamic>),
                 )
                 .toList(),
     );

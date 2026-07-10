@@ -4,12 +4,13 @@ import '../../../../core/utils/path_safety.dart';
 import '../../../../shared/models/approval_mode.dart';
 import '../../../diff_viewer/data/services/diff_service.dart';
 
-typedef ApprovalCallback = Future<bool> Function({
-  required String method,
-  required String path,
-  required bool isWrite,
-  required bool isOutsideWorkspace,
-});
+typedef ApprovalCallback =
+    Future<bool> Function({
+      required String method,
+      required String path,
+      required bool isWrite,
+      required bool isOutsideWorkspace,
+    });
 
 /// Handles inbound ACP client methods from Grok Build CLI.
 class AcpClientRequestHandler {
@@ -57,20 +58,17 @@ class AcpClientRequestHandler {
 
     if (approvalMode == ApprovalMode.askEveryTime && options.isNotEmpty) {
       // Auto-select first allow option so Grok does not hang waiting for UI.
-      optionId = options
-              .firstWhere(
+      optionId =
+          options.firstWhere(
                 (o) => (o['kind'] as String? ?? '').contains('allow'),
                 orElse: () => options.first,
               )['optionId']
-          as String? ??
+              as String? ??
           optionId;
     }
 
     return {
-      'outcome': {
-        'outcome': 'selected',
-        'optionId': optionId,
-      },
+      'outcome': {'outcome': 'selected', 'optionId': optionId},
     };
   }
 
@@ -78,11 +76,7 @@ class AcpClientRequestHandler {
     String method,
     Map<String, dynamic> params,
   ) {
-    return {
-      'acknowledged': true,
-      'method': method,
-      'params': params,
-    };
+    return {'acknowledged': true, 'method': method, 'params': params};
   }
 
   Future<Map<String, dynamic>> _readTextFile(
@@ -93,14 +87,16 @@ class AcpClientRequestHandler {
       return {'error': 'Path traversal denied'};
     }
 
-    final outside = workspacePath.isNotEmpty &&
+    final outside =
+        workspacePath.isNotEmpty &&
         !PathSafety.isInsideWorkspace(
           filePath: path,
           workspacePath: workspacePath,
         );
 
     if (!_shouldAutoApproveRead(outside)) {
-      final approved = await onApprovalRequired?.call(
+      final approved =
+          await onApprovalRequired?.call(
             method: 'fs/read_text_file',
             path: path,
             isWrite: false,
@@ -124,14 +120,16 @@ class AcpClientRequestHandler {
     }
 
     final content = params['content'] as String? ?? '';
-    final outside = workspacePath.isNotEmpty &&
+    final outside =
+        workspacePath.isNotEmpty &&
         !PathSafety.isInsideWorkspace(
           filePath: path,
           workspacePath: workspacePath,
         );
 
     if (!_shouldAutoApproveWrite(outside)) {
-      final approved = await onApprovalRequired?.call(
+      final approved =
+          await onApprovalRequired?.call(
             method: 'fs/write_text_file',
             path: path,
             isWrite: true,

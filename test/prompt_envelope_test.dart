@@ -30,7 +30,7 @@ void main() {
     );
 
     expect(text, contains('Workspace: /projects/demo'));
-    expect(text, contains('Model requested: Composer 2.5 Fast'));
+    expect(text, contains('Model requested: Composer 2.5'));
     expect(text, contains('Thinking effort requested: High'));
     expect(text, contains('Fix the bug'));
   });
@@ -55,15 +55,24 @@ void main() {
     expect(text, contains('Explain this repo'));
   });
 
-  test('model label mapping', () {
-    expect(GrokModel.composer25Fast.cliLabel, 'Composer 2.5');
+  test('model label mapping uses CLI ids', () {
+    expect(GrokModel.composer25Fast.cliLabel, 'grok-composer-2.5-fast');
     final control = modelControl.buildControl(
-      model: GrokModel.grok43,
+      model: GrokModel.grok45,
       effort: ThinkingEffort.medium,
       settings: const AppSettings(),
       alreadyConfirmed: false,
     );
-    expect(control.controlPrompt, contains('Grok 4.3'));
-    expect(control.controlPrompt, contains('/model Grok 4.3 medium'));
+    expect(control.controlPrompt, contains('grok-4.5'));
+    expect(control.controlPrompt, contains('/model grok-4.5 medium'));
+  });
+
+  test('legacy model ids migrate to latest', () {
+    expect(GrokModelX.fromString('grok43')?.id, 'grok-4.5');
+    expect(GrokModelX.fromString('grokBuild01')?.id, 'grok-4.5');
+    expect(
+      GrokModelX.fromString('composer25Fast')?.id,
+      'grok-composer-2.5-fast',
+    );
   });
 }

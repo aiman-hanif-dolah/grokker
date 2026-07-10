@@ -40,7 +40,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: GrokkerSurfaces.voidFloor,
       appBar: AppBar(
-        title: Text('Settings', style: GrokkerTypography.label(color: GrokkerColors.white)),
+        title: Text(
+          'Settings',
+          style: GrokkerTypography.label(color: GrokkerColors.white),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(GrokkerSpacing.s24),
@@ -53,16 +56,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Grok CLI command path',
                   ),
-                  controller: TextEditingController(text: _settings.grokCommandPath),
+                  controller: TextEditingController(
+                    text: _settings.grokCommandPath,
+                  ),
                   onChanged: (v) =>
                       _settings = _settings.copyWith(grokCommandPath: v),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Use npx @xai-official/grok', style: GrokkerTypography.bodySm()),
+                  title: Text(
+                    'Use npx @xai-official/grok',
+                    style: GrokkerTypography.bodySm(),
+                  ),
                   value: _settings.useNpxGrok,
-                  onChanged: (v) =>
-                      setState(() => _settings = _settings.copyWith(useNpxGrok: v)),
+                  onChanged: (v) => setState(
+                    () => _settings = _settings.copyWith(useNpxGrok: v),
+                  ),
                 ),
               ],
             ),
@@ -74,30 +83,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _dropdown<GrokModel>(
                   'Default model',
                   _settings.defaultModel,
-                  GrokModel.values,
+                  GrokModelCatalog.instance.models.isEmpty
+                      ? const [GrokModel.grok45, GrokModel.composer25Fast]
+                      : GrokModelCatalog.instance.models,
                   (m) => m.displayName,
-                  (v) => setState(() => _settings = _settings.copyWith(defaultModel: v)),
+                  (v) => setState(
+                    () => _settings = _settings.copyWith(defaultModel: v),
+                  ),
                 ),
                 _dropdown<ThinkingEffort>(
                   'Default thinking effort',
                   _settings.defaultEffort,
                   ThinkingEffort.values,
                   (e) => e.displayName,
-                  (v) => setState(() => _settings = _settings.copyWith(defaultEffort: v)),
+                  (v) => setState(
+                    () => _settings = _settings.copyWith(defaultEffort: v),
+                  ),
                 ),
                 _dropdown<ApprovalMode>(
                   'Approval mode',
                   _settings.approvalMode,
                   ApprovalMode.values,
                   (m) => m.displayName,
-                  (v) => setState(() => _settings = _settings.copyWith(approvalMode: v)),
+                  (v) => setState(
+                    () => _settings = _settings.copyWith(approvalMode: v),
+                  ),
                 ),
                 if (_settings.approvalMode == ApprovalMode.fullTrust)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: GrokkerSpacing.s8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: GrokkerSpacing.s8,
+                    ),
                     child: Text(
                       'Full trust mode allows Grok to modify local files without approval.',
-                      style: GrokkerTypography.caption(color: GrokkerColors.ash),
+                      style: GrokkerTypography.caption(
+                        color: GrokkerColors.ash,
+                      ),
                     ),
                   ),
                 _dropdown<AppThemeMode>(
@@ -105,7 +126,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _settings.themeMode,
                   AppThemeMode.values,
                   (t) => t.name,
-                  (v) => setState(() => _settings = _settings.copyWith(themeMode: v)),
+                  (v) => setState(
+                    () => _settings = _settings.copyWith(themeMode: v),
+                  ),
                 ),
                 _dropdown<ComposerEnterBehavior>(
                   'Enter key behavior',
@@ -116,7 +139,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ComposerEnterBehavior.newline => 'Newline',
                   },
                   (v) => setState(
-                    () => _settings = _settings.copyWith(composerEnterBehavior: v),
+                    () => _settings = _settings.copyWith(
+                      composerEnterBehavior: v,
+                    ),
                   ),
                 ),
               ],
@@ -128,15 +153,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Auto-start Grok process on launch', style: GrokkerTypography.bodySm()),
+                  title: Text(
+                    'Auto-start Grok process on launch',
+                    style: GrokkerTypography.bodySm(),
+                  ),
                   value: _settings.autoStartGrokProcess,
                   onChanged: (v) => setState(
-                    () => _settings = _settings.copyWith(autoStartGrokProcess: v),
+                    () =>
+                        _settings = _settings.copyWith(autoStartGrokProcess: v),
                   ),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Auto-create session after opening workspace', style: GrokkerTypography.bodySm()),
+                  title: Text(
+                    'Auto-create session after opening workspace',
+                    style: GrokkerTypography.bodySm(),
+                  ),
                   value: _settings.autoCreateSession,
                   onChanged: (v) => setState(
                     () => _settings = _settings.copyWith(autoCreateSession: v),
@@ -144,7 +176,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Show raw ACP events', style: GrokkerTypography.bodySm()),
+                  title: Text(
+                    'Show raw ACP events',
+                    style: GrokkerTypography.bodySm(),
+                  ),
                   value: _settings.showRawAcpEvents,
                   onChanged: (v) => setState(
                     () => _settings = _settings.copyWith(showRawAcpEvents: v),
@@ -152,7 +187,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Show stderr logs', style: GrokkerTypography.bodySm()),
+                  title: Text(
+                    'Show stderr logs',
+                    style: GrokkerTypography.bodySm(),
+                  ),
                   value: _settings.showStderrLogs,
                   onChanged: (v) => setState(
                     () => _settings = _settings.copyWith(showStderrLogs: v),
@@ -160,10 +198,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Inline small text attachments', style: GrokkerTypography.bodySm()),
+                  title: Text(
+                    'Inline small text attachments',
+                    style: GrokkerTypography.bodySm(),
+                  ),
                   value: _settings.inlineSmallTextAttachments,
                   onChanged: (v) => setState(
-                    () => _settings = _settings.copyWith(inlineSmallTextAttachments: v),
+                    () => _settings = _settings.copyWith(
+                      inlineSmallTextAttachments: v,
+                    ),
                   ),
                 ),
               ],
@@ -241,10 +284,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         initialValue: value,
         dropdownColor: GrokkerSurfaces.overlay,
         items: items
-            .map((i) => DropdownMenuItem(
-                  value: i,
-                  child: Text(labelFn(i), style: GrokkerTypography.bodySm()),
-                ))
+            .map(
+              (i) => DropdownMenuItem(
+                value: i,
+                child: Text(labelFn(i), style: GrokkerTypography.bodySm()),
+              ),
+            )
             .toList(),
         onChanged: (v) {
           if (v != null) onChanged(v);
@@ -269,10 +314,7 @@ class _ToolToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile(
       contentPadding: EdgeInsets.zero,
-      title: Text(
-        name,
-        style: GrokkerTypography.bodySm(),
-      ),
+      title: Text(name, style: GrokkerTypography.bodySm()),
       subtitle: Text(
         isHidden ? 'Hidden from chat' : 'Visible in chat',
         style: GrokkerTypography.caption(color: GrokkerColors.ash),

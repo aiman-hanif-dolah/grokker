@@ -71,7 +71,7 @@ class _Chip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-            if (attachment.type == AttachmentType.image)
+          if (attachment.type == AttachmentType.image)
             ClipRRect(
               borderRadius: BorderRadius.circular(GrokkerRadius.badge),
               child: Image.file(
@@ -79,8 +79,11 @@ class _Chip extends StatelessWidget {
                 width: 36,
                 height: 36,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    const Icon(Icons.broken_image, size: 20, color: GrokkerColors.slate),
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.broken_image,
+                  size: 20,
+                  color: GrokkerColors.slate,
+                ),
               ),
             )
           else
@@ -112,7 +115,9 @@ class _Chip extends StatelessWidget {
                 if (attachment.warning != null)
                   Text(
                     attachment.warning!,
-                    style: GrokkerTypography.caption(color: GrokkerColors.warningAmber),
+                    style: GrokkerTypography.caption(
+                      color: GrokkerColors.warningAmber,
+                    ),
                   ),
               ],
             ),
@@ -130,7 +135,11 @@ class _Chip extends StatelessWidget {
           ),
           IconButton(
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.close_rounded, size: 14, color: GrokkerColors.fog),
+            icon: const Icon(
+              Icons.close_rounded,
+              size: 14,
+              color: GrokkerColors.fog,
+            ),
             onPressed: onRemove,
           ),
         ],

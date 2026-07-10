@@ -1,9 +1,13 @@
 /// Helpers for Grok-generated session titles.
 class SessionTitleService {
-  static const placeholderPattern = r'^(Session \d+|New chat|Untitled session)$';
+  static const placeholderPattern =
+      r'^(Session \d+|New chat|Untitled session)$';
 
   bool isPlaceholderTitle(String title) {
-    return RegExp(placeholderPattern, caseSensitive: false).hasMatch(title.trim());
+    return RegExp(
+      placeholderPattern,
+      caseSensitive: false,
+    ).hasMatch(title.trim());
   }
 
   String buildTitlePrompt({
@@ -13,7 +17,7 @@ class SessionTitleService {
     final preview = assistantPreview == null || assistantPreview.isEmpty
         ? ''
         : '\nAssistant reply (summary context): '
-            '${_clip(assistantPreview, 280)}';
+              '${_clip(assistantPreview, 280)}';
 
     return '[Grokker metadata — respond with a session title only]\n'
         'Create a concise session title (3–6 words) that summarizes the '
@@ -37,7 +41,10 @@ class SessionTitleService {
         .firstWhere((l) => l.isNotEmpty, orElse: () => title);
 
     title = title.replaceAll(RegExp(r'^["\x27`]+|["\x27`]+$'), '');
-    title = title.replaceAll(RegExp(r'^(Title:|Session:)\s*', caseSensitive: false), '');
+    title = title.replaceAll(
+      RegExp(r'^(Title:|Session:)\s*', caseSensitive: false),
+      '',
+    );
     title = title.replaceAll(RegExp(r'[.!?]+$'), '');
     title = title.replaceAll(RegExp(r'\s+'), ' ').trim();
 

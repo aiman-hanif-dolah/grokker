@@ -13,7 +13,7 @@ class GrokkerEyebrow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text.toUpperCase(),
-      style: GrokkerTypography.eyebrow(color: color ?? GrokkerColors.slate),
+      style: GrokkerTypography.eyebrow(color: color ?? GrokkerColors.fog),
     );
   }
 }
@@ -34,24 +34,29 @@ class GrokkerBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg, border) = switch (variant) {
       GrokkerBadgeVariant.success => (
-        GrokkerColors.mapGreen.withValues(alpha: 0.15),
+        GrokkerColors.mapGreen.withValues(alpha: 0.12),
         GrokkerColors.mapGreen,
-        GrokkerColors.mapGreen.withValues(alpha: 0.3),
+        GrokkerColors.mapGreen.withValues(alpha: 0.28),
       ),
       GrokkerBadgeVariant.info => (
-        GrokkerColors.signalBlue.withValues(alpha: 0.15),
-        GrokkerColors.signalBlueBright,
-        GrokkerColors.signalBlue.withValues(alpha: 0.3),
+        GrokkerColors.ember.withValues(alpha: 0.12),
+        GrokkerColors.emberBright,
+        GrokkerColors.ember.withValues(alpha: 0.3),
       ),
       GrokkerBadgeVariant.error => (
-        GrokkerColors.errorRed.withValues(alpha: 0.15),
+        GrokkerColors.errorRed.withValues(alpha: 0.12),
         GrokkerColors.errorRed,
         GrokkerColors.errorRed.withValues(alpha: 0.3),
       ),
       GrokkerBadgeVariant.neutral => (
-        GrokkerColors.graphite,
-        GrokkerColors.fog,
-        GrokkerColors.pewter,
+        GrokkerColors.slate,
+        GrokkerColors.mist,
+        GrokkerColors.iron,
+      ),
+      GrokkerBadgeVariant.accent => (
+        GrokkerColors.ember,
+        GrokkerColors.snow,
+        GrokkerColors.ember,
       ),
     };
 
@@ -82,8 +87,9 @@ class GrokkerBadge extends StatelessWidget {
   }
 }
 
-enum GrokkerBadgeVariant { success, info, error, neutral }
+enum GrokkerBadgeVariant { success, info, error, neutral, accent }
 
+/// Dark filled CTA — Awesomic primary action (obsidian + hairline ring).
 class GrokkerPrimaryButton extends StatelessWidget {
   const GrokkerPrimaryButton({
     super.key,
@@ -104,41 +110,54 @@ class GrokkerPrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
     final child = icon == null
-        ? Text(label, style: GrokkerTypography.label(color: GrokkerColors.white))
+        ? Text(
+            label,
+            style: GrokkerTypography.label(
+              color: enabled ? GrokkerColors.snow : GrokkerColors.fog,
+            ),
+          )
         : Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: GrokkerColors.white),
+              Icon(
+                icon,
+                size: 16,
+                color: enabled ? GrokkerColors.snow : GrokkerColors.fog,
+              ),
               const SizedBox(width: GrokkerSpacing.s8),
               Text(
                 label,
-                style: GrokkerTypography.label(color: GrokkerColors.white),
+                style: GrokkerTypography.label(
+                  color: enabled ? GrokkerColors.snow : GrokkerColors.fog,
+                ),
               ),
             ],
           );
 
     final button = DecoratedBox(
       decoration: BoxDecoration(
-        gradient: enabled ? GrokkerGradients.signalGlow : null,
-        color: enabled ? null : GrokkerColors.steel,
-        borderRadius: BorderRadius.circular(GrokkerRadius.pill),
-        boxShadow: enabled ? GrokkerShadows.glow(GrokkerColors.signalBlue, blur: 12) : null,
+        color: enabled ? GrokkerColors.obsidian : GrokkerColors.slate,
+        borderRadius: BorderRadius.circular(GrokkerRadius.button),
+        border: Border.all(
+          color: enabled ? const Color(0xFF2C2E34) : GrokkerColors.iron,
+          width: 1.5,
+        ),
       ),
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
           backgroundColor: Colors.transparent,
-          foregroundColor: GrokkerColors.white,
+          foregroundColor: GrokkerColors.snow,
           disabledBackgroundColor: Colors.transparent,
-          disabledForegroundColor: GrokkerColors.slate,
+          disabledForegroundColor: GrokkerColors.fog,
           shadowColor: Colors.transparent,
           padding: EdgeInsets.symmetric(
-            horizontal: dense ? GrokkerSpacing.s16 : GrokkerSpacing.s24,
+            horizontal: dense ? GrokkerSpacing.s16 : GrokkerSpacing.s20,
             vertical: dense ? GrokkerSpacing.s8 : GrokkerSpacing.s12,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(GrokkerRadius.pill),
+            borderRadius: BorderRadius.circular(GrokkerRadius.button),
           ),
           elevation: 0,
         ),
@@ -174,18 +193,21 @@ class GrokkerOutlinedButton extends StatelessWidget {
     final button = OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: GrokkerColors.white,
-        side: const BorderSide(color: GrokkerColors.pewter),
+        foregroundColor: GrokkerColors.mist,
+        side: const BorderSide(color: GrokkerColors.iron),
         padding: EdgeInsets.symmetric(
-          horizontal: dense ? GrokkerSpacing.s16 : GrokkerSpacing.s24,
+          horizontal: dense ? GrokkerSpacing.s16 : GrokkerSpacing.s20,
           vertical: dense ? GrokkerSpacing.s8 : GrokkerSpacing.s12,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(GrokkerRadius.pill),
+          borderRadius: BorderRadius.circular(GrokkerRadius.button),
         ),
       ),
       child: icon == null
-          ? Text(label, style: GrokkerTypography.label(color: GrokkerColors.white))
+          ? Text(
+              label,
+              style: GrokkerTypography.label(color: GrokkerColors.mist),
+            )
           : Row(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -194,7 +216,7 @@ class GrokkerOutlinedButton extends StatelessWidget {
                 const SizedBox(width: GrokkerSpacing.s8),
                 Text(
                   label,
-                  style: GrokkerTypography.label(color: GrokkerColors.white),
+                  style: GrokkerTypography.label(color: GrokkerColors.mist),
                 ),
               ],
             ),
@@ -223,7 +245,7 @@ class GrokkerGhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accent ? GrokkerColors.signalBlueBright : GrokkerColors.fog;
+    final color = accent ? GrokkerColors.emberBright : GrokkerColors.ash;
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
@@ -267,7 +289,7 @@ class GrokkerIconFrameButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final button = Material(
       color: accent
-          ? GrokkerColors.signalBlue.withValues(alpha: 0.12)
+          ? GrokkerColors.ember.withValues(alpha: 0.12)
           : GrokkerSurfaces.raised,
       borderRadius: BorderRadius.circular(GrokkerRadius.input),
       child: InkWell(
@@ -280,14 +302,14 @@ class GrokkerIconFrameButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(GrokkerRadius.input),
             border: Border.all(
               color: accent
-                  ? GrokkerColors.signalBlue.withValues(alpha: 0.4)
-                  : GrokkerColors.pewter,
+                  ? GrokkerColors.ember.withValues(alpha: 0.4)
+                  : GrokkerColors.iron,
             ),
           ),
           child: Icon(
             icon,
             size: 16,
-            color: accent ? GrokkerColors.signalBlueBright : GrokkerColors.fog,
+            color: accent ? GrokkerColors.emberBright : GrokkerColors.ash,
           ),
         ),
       ),
@@ -306,7 +328,7 @@ class GrokkerPanel extends StatelessWidget {
     this.color = GrokkerSurfaces.deepPanel,
     this.border,
     this.accentStrip = false,
-    this.accentColor = GrokkerColors.signalBlue,
+    this.accentColor = GrokkerColors.ember,
   });
 
   final Widget child;
@@ -323,14 +345,10 @@ class GrokkerPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(radius),
-        border: border == null ? null : Border.fromBorderSide(border!),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x20000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
+        border: Border.all(
+          color: border?.color ?? GrokkerColors.iron,
+          width: border?.width ?? 1,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
@@ -341,22 +359,11 @@ class GrokkerPanel extends StatelessWidget {
                 left: 0,
                 top: 0,
                 bottom: 0,
-                child: Container(
-                  width: 3,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        accentColor,
-                        accentColor.withValues(alpha: 0.4),
-                      ],
-                    ),
-                  ),
-                ),
+                child: Container(width: 3, color: accentColor),
               ),
             Padding(
-              padding: padding ?? const EdgeInsets.all(GrokkerSpacing.cardPadding),
+              padding:
+                  padding ?? const EdgeInsets.all(GrokkerSpacing.cardPadding),
               child: child,
             ),
           ],
@@ -390,14 +397,11 @@ class GrokkerSection extends StatelessWidget {
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 12, color: GrokkerColors.slate),
+                Icon(icon, size: 12, color: GrokkerColors.fog),
                 const SizedBox(width: GrokkerSpacing.s8),
               ],
               GrokkerEyebrow(title),
-              if (trailing != null) ...[
-                const Spacer(),
-                trailing!,
-              ],
+              if (trailing != null) ...[const Spacer(), trailing!],
             ],
           ),
           const SizedBox(height: GrokkerSpacing.s12),
@@ -423,7 +427,7 @@ class GrokkerFilterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? GrokkerColors.signalBlue : Colors.transparent,
+      color: selected ? GrokkerColors.obsidian : Colors.transparent,
       borderRadius: BorderRadius.circular(GrokkerRadius.pill),
       child: InkWell(
         onTap: onTap,
@@ -437,16 +441,13 @@ class GrokkerFilterPill extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(GrokkerRadius.pill),
             border: selected
-                ? null
-                : Border.all(color: GrokkerColors.pewter),
-            boxShadow: selected
-                ? GrokkerShadows.glow(GrokkerColors.signalBlue, blur: 8)
-                : null,
+                ? Border.all(color: const Color(0xFF2C2E34), width: 1.5)
+                : Border.all(color: GrokkerColors.iron),
           ),
           child: Text(
             label,
             style: GrokkerTypography.label(
-              color: selected ? GrokkerColors.white : GrokkerColors.fog,
+              color: selected ? GrokkerColors.snow : GrokkerColors.ash,
             ),
           ),
         ),
@@ -462,34 +463,11 @@ class GrokkerSurfaceDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = GrokkerColors.iron.withValues(alpha: 0.8);
     if (vertical) {
-      return Container(
-        width: 1,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0x00FFFFFF),
-              Color(0x18FFFFFF),
-              Color(0x00FFFFFF),
-            ],
-          ),
-        ),
-      );
+      return Container(width: 1, color: color);
     }
-    return Container(
-      height: 1,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0x00FFFFFF),
-            Color(0x18FFFFFF),
-            Color(0x00FFFFFF),
-          ],
-        ),
-      ),
-    );
+    return Container(height: 1, color: color);
   }
 }
 
@@ -498,7 +476,7 @@ class GrokkerMetaChip extends StatelessWidget {
     super.key,
     required this.label,
     this.icon,
-    this.color = GrokkerColors.fog,
+    this.color = GrokkerColors.ash,
   });
 
   final String label;
@@ -513,9 +491,9 @@ class GrokkerMetaChip extends StatelessWidget {
         vertical: GrokkerSpacing.s4,
       ),
       decoration: BoxDecoration(
-        color: GrokkerSurfaces.raised,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(GrokkerRadius.badge),
-        border: Border.all(color: GrokkerColors.pewter.withValues(alpha: 0.5)),
+        border: Border.all(color: GrokkerColors.iron),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -535,7 +513,7 @@ class GrokkerAvatar extends StatelessWidget {
   const GrokkerAvatar({
     super.key,
     required this.icon,
-    this.color = GrokkerColors.signalBlue,
+    this.color = GrokkerColors.ember,
     this.size = 32,
   });
 
@@ -549,16 +527,9 @@ class GrokkerAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withValues(alpha: 0.25),
-            color.withValues(alpha: 0.08),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(size * 0.32),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(GrokkerRadius.icons * 0.35),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Icon(icon, size: size * 0.5, color: color),
     );
@@ -580,13 +551,18 @@ class GrokkerSearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      key: key,
       controller: controller,
       onChanged: onChanged,
-      style: GrokkerTypography.bodySm(color: GrokkerColors.fog),
+      style: GrokkerTypography.bodySm(color: GrokkerColors.mist),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GrokkerTypography.bodySm(color: GrokkerColors.slate),
-        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: GrokkerColors.slate),
+        hintStyle: GrokkerTypography.bodySm(color: GrokkerColors.fog),
+        prefixIcon: const Icon(
+          Icons.search_rounded,
+          size: 18,
+          color: GrokkerColors.fog,
+        ),
         filled: true,
         fillColor: GrokkerSurfaces.raised,
         contentPadding: const EdgeInsets.symmetric(
@@ -594,16 +570,16 @@ class GrokkerSearchField extends StatelessWidget {
           vertical: GrokkerSpacing.s12,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(GrokkerRadius.chip),
-          borderSide: BorderSide(color: GrokkerColors.pewter.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(GrokkerRadius.input),
+          borderSide: const BorderSide(color: GrokkerColors.iron),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(GrokkerRadius.chip),
-          borderSide: BorderSide(color: GrokkerColors.pewter.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(GrokkerRadius.input),
+          borderSide: const BorderSide(color: GrokkerColors.iron),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(GrokkerRadius.chip),
-          borderSide: const BorderSide(color: GrokkerColors.signalBlue, width: 1.5),
+          borderRadius: BorderRadius.circular(GrokkerRadius.input),
+          borderSide: const BorderSide(color: GrokkerColors.ember, width: 1.5),
         ),
         isDense: true,
       ),

@@ -16,6 +16,7 @@ void main() {
     });
 
     test('resolveHomeDirectory ignores macOS sandbox container HOME', () {
+      if (!Platform.isMacOS) return;
       final user = Platform.environment['USER'];
       if (user == null) return;
 
@@ -24,10 +25,21 @@ void main() {
       expect(resolved, '/Users/$user');
     });
 
+    test('resolveHomeDirectory uses USERPROFILE on Windows', () {
+      if (!Platform.isWindows) return;
+      final profile = Platform.environment['USERPROFILE'];
+      expect(profile, isNotNull);
+      final resolved = GrokCliLocatorService.resolveHomeDirectory();
+      expect(resolved, profile);
+    });
+
     test('officialGrokPath points to ~/.grok/bin/grok', () {
       final path = GrokCliLocatorService.officialGrokPath();
       if (home != null) {
-        expect(path, '$home/.grok/bin/grok');
+        final expected = Platform.isWindows
+            ? '$home\\.grok\\bin\\grok'
+            : '$home/.grok/bin/grok';
+        expect(path, expected);
       }
     });
 
@@ -64,8 +76,14 @@ void main() {
     test('augmentedEnvironment includes ~/.grok/bin in PATH', () {
       final env = GrokCliLocatorService.augmentedEnvironment();
       if (home != null) {
-        expect(env['PATH'], contains('$home/.grok/bin'));
+        final expectedBin = Platform.isWindows
+            ? '$home\\.grok\\bin'
+            : '$home/.grok/bin';
+        expect(env['PATH'], contains(expectedBin));
         expect(env['HOME'], home);
+        if (Platform.isWindows) {
+          expect(env['USERPROFILE'], home);
+        }
       }
     });
   });

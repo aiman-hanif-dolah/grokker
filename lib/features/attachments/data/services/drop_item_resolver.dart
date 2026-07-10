@@ -38,9 +38,8 @@ class DropItemResolver {
     final bookmark = item.extraAppleBookmark;
     var accessed = false;
     if (bookmark != null && bookmark.isNotEmpty) {
-      accessed = await DesktopDrop.instance.startAccessingSecurityScopedResource(
-        bookmark: bookmark,
-      );
+      accessed = await DesktopDrop.instance
+          .startAccessingSecurityScopedResource(bookmark: bookmark);
     }
 
     try {
@@ -112,7 +111,7 @@ class DropItemResolver {
     }
 
     final fromName = item.name;
-    if (fromName != null && fromName.contains('.')) {
+    if (fromName.contains('.')) {
       return p.extension(fromName).substring(1).toLowerCase();
     }
 

@@ -34,11 +34,13 @@ void main() {
     test('scans workspace and reads AGENTS.md', () async {
       final project = Directory('${tempDir.path}/demo');
       await project.create();
-      await File('${project.path}/AGENTS.md').writeAsString(
-        '# Agent rules\nAlways run tests.',
-      );
+      await File(
+        '${project.path}/AGENTS.md',
+      ).writeAsString('# Agent rules\nAlways run tests.');
       await Directory('${project.path}/lib').create();
-      await File('${project.path}/lib/main.dart').writeAsString('void main() {}');
+      await File(
+        '${project.path}/lib/main.dart',
+      ).writeAsString('void main() {}');
       await File('${project.path}/pubspec.yaml').writeAsString('name: demo');
 
       final info = WorkspaceInfo(

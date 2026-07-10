@@ -34,8 +34,18 @@ class _GrokkerAppState extends State<GrokkerApp> {
 
   Future<void> _bootstrap() async {
     try {
-      await _locator.init().timeout(const Duration(seconds: 10));
+      await _locator.init().timeout(const Duration(seconds: 15));
       final settings = _locator.settingsCubit.state.settings;
+
+      // Keep model dropdown in sync with CLI-available models.
+      unawaited(
+        _locator.modelsCubit.load(
+          refreshCli: true,
+          grokCommand: settings.grokCommandPath.isNotEmpty
+              ? settings.grokCommandPath
+              : null,
+        ),
+      );
 
       await _locator.grokCliCubit
           .detect(
@@ -117,7 +127,9 @@ class _GrokkerAppState extends State<GrokkerApp> {
                   ),
                 ),
                 const SizedBox(height: GrokkerSpacing.s16),
-                const CircularProgressIndicator(color: GrokkerColors.signalBlue),
+                const CircularProgressIndicator(
+                  color: GrokkerColors.signalBlue,
+                ),
                 const SizedBox(height: GrokkerSpacing.s16),
                 Text('Starting Grokker…', style: GrokkerTypography.body()),
               ],
@@ -132,9 +144,13 @@ class _GrokkerAppState extends State<GrokkerApp> {
       child: BlocBuilder<SettingsCubit, SettingsState>(
         bloc: _locator.settingsCubit,
         builder: (context, settingsState) {
+          final settings = settingsState.settings;
           return MaterialApp(
             title: AppConstants.appName,
-            theme: AppTheme.fromSettings(settingsState.settings),
+            // Dark is the default product theme; light is optional.
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: AppTheme.themeModeOf(settings),
             home: BlocBuilder<AppStartupCubit, AppStartupState>(
               bloc: _locator.appStartupCubit,
               builder: (context, startup) {

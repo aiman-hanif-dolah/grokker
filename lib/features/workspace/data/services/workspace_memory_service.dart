@@ -118,7 +118,9 @@ class WorkspaceMemoryService {
       final file = File(p.join(absolute, name));
       if (await file.exists()) {
         final stat = await file.stat();
-        signals.add('$name:${stat.modified.millisecondsSinceEpoch}:${stat.size}');
+        signals.add(
+          '$name:${stat.modified.millisecondsSinceEpoch}:${stat.size}',
+        );
       }
     }
 
@@ -163,7 +165,8 @@ class WorkspaceMemoryService {
 
     var treeSummary = treeBuffer.toString().trimRight();
     if (treeSummary.length > maxTreeChars) {
-      treeSummary = '${treeSummary.substring(0, maxTreeChars)}\n… (tree truncated)';
+      treeSummary =
+          '${treeSummary.substring(0, maxTreeChars)}\n… (tree truncated)';
       treeTruncated = true;
     }
 
@@ -225,9 +228,10 @@ class WorkspaceMemoryService {
     }
 
     entries.sort(
-      (a, b) => p.basename(a.path).toLowerCase().compareTo(
-        p.basename(b.path).toLowerCase(),
-      ),
+      (a, b) => p
+          .basename(a.path)
+          .toLowerCase()
+          .compareTo(p.basename(b.path).toLowerCase()),
     );
 
     for (var i = 0; i < entries.length; i++) {
@@ -272,8 +276,10 @@ class WorkspaceMemoryService {
     }
   }
 
-  Future<String?> loadLastWorkspacePath() => _repository.loadLastWorkspacePath();
-  Future<void> saveLastWorkspacePath(String path) => _repository.saveLastWorkspacePath(path);
+  Future<String?> loadLastWorkspacePath() =>
+      _repository.loadLastWorkspacePath();
+  Future<void> saveLastWorkspacePath(String path) =>
+      _repository.saveLastWorkspacePath(path);
 
   Future<String?> _readFirstExisting(List<String> paths) async {
     for (final path in paths) {

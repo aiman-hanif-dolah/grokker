@@ -32,38 +32,94 @@ class AttachmentService {
     '.bmp',
     '.ico',
   };
+
   static const textExtensions = {
     '.txt',
+    '.log',
+    '.csv',
+    '.tsv',
     '.md',
     '.markdown',
+    '.rst',
     '.json',
+    '.jsonc',
+    '.json5',
     '.yaml',
     '.yml',
     '.toml',
+    '.ini',
+    '.cfg',
+    '.conf',
+    '.env',
+    '.properties',
+    '.xml',
+    '.html',
+    '.htm',
+    '.css',
+    '.scss',
+    '.less',
+    '.svg',
     '.dart',
     '.ts',
     '.tsx',
     '.js',
     '.jsx',
+    '.mjs',
+    '.cjs',
     '.py',
+    '.rb',
+    '.php',
     '.rs',
     '.go',
     '.java',
     '.kt',
+    '.kts',
     '.swift',
     '.c',
+    '.cc',
     '.cpp',
+    '.cxx',
     '.h',
+    '.hpp',
     '.cs',
-    '.rb',
-    '.php',
+    '.fs',
     '.sql',
     '.sh',
+    '.bash',
     '.zsh',
-    '.xml',
-    '.html',
-    '.css',
-    '.scss',
+    '.ps1',
+    '.bat',
+    '.cmd',
+    '.r',
+    '.lua',
+    '.pl',
+    '.pm',
+    '.scala',
+    '.groovy',
+    '.gradle',
+    '.cmake',
+    '.make',
+    '.mk',
+    '.dockerfile',
+    '.gitignore',
+    '.gitattributes',
+    '.editorconfig',
+    '.lock',
+  };
+
+  static const documentExtensions = {
+    '.pdf',
+    '.doc',
+    '.docx',
+    '.xls',
+    '.xlsx',
+    '.ppt',
+    '.pptx',
+    '.odt',
+    '.ods',
+    '.odp',
+    '.rtf',
+    '.epub',
   };
 
   Future<Directory> _stagingDir() async {
@@ -82,13 +138,16 @@ class AttachmentService {
     int warningThreshold = AppConstants.attachmentWarningBytesDefault,
   }) async {
     final dir = await _stagingDir();
-    final fileName = 'paste_${_uuid.v4()}.$extension';
+    final ext = extension.startsWith('.') ? extension.substring(1) : extension;
+    final fileName = 'paste_${_uuid.v4()}.$ext';
     final filePath = p.join(dir.path, fileName);
     final file = File(filePath);
     await file.writeAsBytes(bytes, flush: true);
     return validateAndCreate(filePath, warningThreshold: warningThreshold);
   }
 
+  /// Accepts any existing file. Unknown types become [AttachmentType.binary]
+  /// so PDFs and other documents are never silently dropped.
   Future<AttachmentItem?> validateAndCreate(
     String filePath, {
     int warningThreshold = AppConstants.attachmentWarningBytesDefault,
@@ -98,12 +157,18 @@ class AttachmentService {
 
     final ext = p.extension(filePath).toLowerCase();
     final stat = await file.stat();
-    final type = _detectType(ext);
-    if (type == AttachmentType.unknown) return null;
+    if (stat.type != FileSystemEntityType.file) return null;
 
+    final type = _detectType(ext);
     String? warning;
     if (stat.size > warningThreshold) {
       warning = 'Large file (${_formatBytes(stat.size)}). Sending may be slow.';
+    }
+    if (type == AttachmentType.pdf &&
+        stat.size > AppConstants.inlineTextMaxBytes) {
+      warning = warning == null
+          ? 'PDF will be embedded as binary for Grok to read.'
+          : '$warning PDF embedded as binary.';
     }
 
     return AttachmentItem(
@@ -131,22 +196,31 @@ class AttachmentService {
           );
         case AttachmentType.pdf:
           buffer.writeln(
-            '* [pdf] ${a.path} (${_formatBytes(a.sizeBytes)}${a.pageCount != null ? ', ${a.pageCount} pages' : ''})',
+            '* [pdf] ${a.fileName} (${_formatBytes(a.sizeBytes)}) at ${a.path}',
           );
-          buffer.writeln('  Attached PDF passed as local file reference.');
+          buffer.writeln(
+            '  PDF binary content is embedded in the prompt for Grok to read.',
+          );
+        case AttachmentType.binary:
+          buffer.writeln(
+            '* [binary] ${a.fileName} (${a.mimeType}, ${_formatBytes(a.sizeBytes)}) at ${a.path}',
+          );
+          buffer.writeln('  Binary content is embedded when size permits.');
         default:
           buffer.writeln(
             '* [${a.type.name}] ${a.path} (${_formatBytes(a.sizeBytes)})',
           );
           if (inlineSmallText &&
               a.sizeBytes <= inlineMaxBytes &&
-              a.type != AttachmentType.image &&
-              a.type != AttachmentType.pdf) {
+              a.type != AttachmentType.image) {
             try {
               final content = await File(a.path).readAsString();
               buffer.writeln('  Inline content:\n```\n$content\n```');
             } catch (_) {
-              buffer.writeln('  (Could not read file for inline content)');
+              // Try as binary note
+              buffer.writeln(
+                '  (Text decode failed — binary will be embedded if possible)',
+              );
             }
           }
       }
@@ -157,13 +231,31 @@ class AttachmentService {
   AttachmentType _detectType(String ext) {
     if (imageExtensions.contains(ext)) return AttachmentType.image;
     if (ext == '.pdf') return AttachmentType.pdf;
-    if (ext == '.md' || ext == '.markdown') return AttachmentType.markdown;
-    if ({'.json', '.yaml', '.yml', '.toml'}.contains(ext)) {
+    if (ext == '.md' || ext == '.markdown' || ext == '.rst') {
+      return AttachmentType.markdown;
+    }
+    if ({
+      '.json',
+      '.jsonc',
+      '.json5',
+      '.yaml',
+      '.yml',
+      '.toml',
+      '.ini',
+      '.cfg',
+      '.conf',
+      '.env',
+      '.properties',
+    }.contains(ext)) {
       return AttachmentType.config;
     }
+    if (ext == '.txt' || ext == '.log' || ext == '.csv' || ext == '.tsv') {
+      return AttachmentType.text;
+    }
     if (textExtensions.contains(ext)) return AttachmentType.code;
-    if (ext == '.txt') return AttachmentType.text;
-    return AttachmentType.unknown;
+    if (documentExtensions.contains(ext)) return AttachmentType.binary;
+    // Accept unknown files as binary rather than rejecting them.
+    return AttachmentType.binary;
   }
 
   String _mimeForExtension(String ext, AttachmentType type) {
@@ -174,18 +266,48 @@ class AttachmentService {
         if (ext == '.gif') return 'image/gif';
         if (ext == '.heic') return 'image/heic';
         if (ext == '.heif') return 'image/heif';
+        if (ext == '.bmp') return 'image/bmp';
+        if (ext == '.svg') return 'image/svg+xml';
         return 'image/jpeg';
       case AttachmentType.pdf:
         return 'application/pdf';
       case AttachmentType.markdown:
         return 'text/markdown';
       case AttachmentType.config:
-        if (ext == '.json') return 'application/json';
+        if (ext == '.json' || ext == '.jsonc' || ext == '.json5') {
+          return 'application/json';
+        }
         if (ext == '.toml') return 'application/toml';
+        if (ext == '.xml') return 'application/xml';
         return 'application/yaml';
-      default:
+      case AttachmentType.binary:
+        return _binaryMime(ext);
+      case AttachmentType.code:
+      case AttachmentType.text:
+      case AttachmentType.unknown:
         return 'text/plain';
     }
+  }
+
+  String _binaryMime(String ext) {
+    return switch (ext) {
+      '.pdf' => 'application/pdf',
+      '.doc' => 'application/msword',
+      '.docx' =>
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls' => 'application/vnd.ms-excel',
+      '.xlsx' =>
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt' => 'application/vnd.ms-powerpoint',
+      '.pptx' =>
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      '.zip' => 'application/zip',
+      '.gz' => 'application/gzip',
+      '.7z' => 'application/x-7z-compressed',
+      '.rtf' => 'application/rtf',
+      '.epub' => 'application/epub+zip',
+      _ => 'application/octet-stream',
+    };
   }
 
   String _formatBytes(int bytes) {

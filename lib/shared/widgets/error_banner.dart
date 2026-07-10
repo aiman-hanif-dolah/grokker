@@ -31,14 +31,18 @@ class _ErrorBannerState extends State<ErrorBanner> {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: GrokkerSpacing.chatMaxWidth),
+          constraints: const BoxConstraints(
+            maxWidth: GrokkerSpacing.chatMaxWidth,
+          ),
           child: GrokkerPanel(
             padding: const EdgeInsets.all(GrokkerSpacing.s16),
             radius: GrokkerRadius.card,
             color: GrokkerColors.errorRedMuted.withValues(alpha: 0.25),
             accentStrip: true,
             accentColor: GrokkerColors.errorRed,
-            border: BorderSide(color: GrokkerColors.errorRed.withValues(alpha: 0.4)),
+            border: BorderSide(
+              color: GrokkerColors.errorRed.withValues(alpha: 0.4),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -49,7 +53,9 @@ class _ErrorBannerState extends State<ErrorBanner> {
                       height: 36,
                       decoration: BoxDecoration(
                         color: GrokkerColors.errorRed.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(GrokkerRadius.input),
+                        borderRadius: BorderRadius.circular(
+                          GrokkerRadius.input,
+                        ),
                         border: Border.all(
                           color: GrokkerColors.errorRed.withValues(alpha: 0.3),
                         ),
@@ -73,7 +79,9 @@ class _ErrorBannerState extends State<ErrorBanner> {
                           const SizedBox(height: GrokkerSpacing.s4),
                           Text(
                             widget.error.title,
-                            style: GrokkerTypography.label(color: theme.headingText),
+                            style: GrokkerTypography.label(
+                              color: theme.headingText,
+                            ),
                           ),
                         ],
                       ),
@@ -105,7 +113,9 @@ class _ErrorBannerState extends State<ErrorBanner> {
                       Expanded(
                         child: Text(
                           widget.error.suggestedFix,
-                          style: GrokkerTypography.caption(color: theme.subtleText),
+                          style: GrokkerTypography.caption(
+                            color: theme.subtleText,
+                          ),
                         ),
                       ),
                     ],
@@ -114,7 +124,9 @@ class _ErrorBannerState extends State<ErrorBanner> {
                 if (widget.error.technicalDetails != null) ...[
                   const SizedBox(height: GrokkerSpacing.s8),
                   GrokkerGhostButton(
-                    label: _expanded ? 'Hide details' : 'Show technical details',
+                    label: _expanded
+                        ? 'Hide details'
+                        : 'Show technical details',
                     icon: _expanded ? Icons.expand_less : Icons.expand_more,
                     accent: true,
                     onPressed: () => setState(() => _expanded = !_expanded),
@@ -126,7 +138,9 @@ class _ErrorBannerState extends State<ErrorBanner> {
                       padding: const EdgeInsets.all(GrokkerSpacing.s12),
                       decoration: BoxDecoration(
                         color: GrokkerSurfaces.voidFloor,
-                        borderRadius: BorderRadius.circular(GrokkerRadius.input),
+                        borderRadius: BorderRadius.circular(
+                          GrokkerRadius.input,
+                        ),
                         border: Border.all(color: GrokkerColors.gunmetal),
                       ),
                       child: SelectableText(

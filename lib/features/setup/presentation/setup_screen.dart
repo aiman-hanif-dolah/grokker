@@ -28,10 +28,7 @@ class SetupScreen extends StatelessWidget {
                   variant: GrokkerBadgeVariant.info,
                 ),
                 const SizedBox(height: GrokkerSpacing.s24),
-                Text(
-                  'Grok CLI not found.',
-                  style: GrokkerTypography.display(),
-                ),
+                Text('Grok CLI not found.', style: GrokkerTypography.display()),
                 const SizedBox(height: GrokkerSpacing.s16),
                 Text(
                   'Grokker uses your local Grok Build CLI. Your SuperGrok login stays managed by xAI.',
